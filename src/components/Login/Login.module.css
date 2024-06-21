@@ -1,0 +1,44 @@
+.titulo {
+    width: 100%;
+    height: 90%;
+    float: left;
+    position: relative;
+    text-align: center;
+  }
+  
+  .titulo h2 {
+    text-align: center;
+    font-size: clamp(0.6em, 1.1em + 1vw, 2.5em);
+    margin-bottom: 3%;
+  }
+  
+  .titulo h5 {
+    text-align: justify;
+    margin-right: 20%;
+    margin-left: 20%;
+    margin-bottom: 3%;
+  }
+  
+  .needs-validation .form-group {
+    margin-bottom: 2%;
+  }
+  
+  .titulo input {
+    margin-left: auto;
+    margin-right: auto;
+    width: 30%;
+    font-family: "Montserrat";
+    font-size: clamp(0.4em, 0.8em + 1vw, 1.5em);
+  }
+  
+  .button {
+    cursor: pointer;
+  }
+  
+  .titulo button {
+    margin-top: 2%;
+    margin-bottom: 4%;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
