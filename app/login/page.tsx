@@ -32,11 +32,18 @@ export default function LoginPage() {
         Cookies.set('scope', scope);
 
         const initialPage = getInitialPage(role, scope);
+        if(!initialPage){
+          throw new Error("Página não encontrada")
+        }
         router.push(initialPage);
       } else {
         alert('Credenciais inválidas');
       }
-    } finally {
+    }catch(error){
+      alert('Credenciais inválidas');
+    } 
+    
+    finally {
       setIsLoading(false);
     }
   };

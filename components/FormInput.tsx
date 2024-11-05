@@ -17,7 +17,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 
-
 interface FormInputType {
   type?: string;
   name: string;
@@ -25,8 +24,9 @@ interface FormInputType {
   onChange: (name: string, value: any) => void;
   options?: string[];
   isDisabled?: boolean;
+  isRequired?: boolean;
   answerType?: string;
-};
+}
 
 const FormInput: React.FC<FormInputType> = ({
   type,
@@ -35,23 +35,26 @@ const FormInput: React.FC<FormInputType> = ({
   onChange,
   options = [],
   isDisabled = false,
+  isRequired = false,
   answerType,
 }) => {
-  
   const [value, setValue] = useState(initialValue);
+  const [isEmpty, setIsEmpty] = useState(isRequired && !initialValue);
 
   useEffect(() => {
     setValue(initialValue);
-  }, [initialValue]);
+    setIsEmpty(isRequired && !initialValue);
+  }, [initialValue, isRequired]);
 
   const handleChange = (newValue: any) => {
     setValue(newValue);
+    setIsEmpty(isRequired && !newValue);
     onChange(name, newValue);
   };
 
   const getInputType = () => {
     let returntype;
-  
+
     switch (answerType) {
       case "Option":
         returntype = "select";
@@ -74,22 +77,25 @@ const FormInput: React.FC<FormInputType> = ({
       case "Date":
         returntype = "date";
         break;
+      case "Time":
+        returntype = "time";
+        break;
       default:
         returntype = type || "text";
         break;
     }
-  
+
     return returntype;
   };
-  
 
   const inputType = getInputType();
+  const inputStyles = isEmpty ? { borderColor: 'red', borderWidth: '1px' } : {};
 
   return (
     <div className="space-y-2">
       {inputType === "select" && (
         <Select value={value} onValueChange={handleChange} disabled={isDisabled}>
-          <SelectTrigger>
+          <SelectTrigger style={inputStyles}>
             <SelectValue placeholder="Selecione uma opção" />
           </SelectTrigger>
           <SelectContent>
@@ -108,6 +114,7 @@ const FormInput: React.FC<FormInputType> = ({
           onChange={(e) => handleChange(e.target.value)}
           placeholder="Digite algo..."
           disabled={isDisabled}
+          style={inputStyles}
         />
       )}
 
@@ -150,6 +157,7 @@ const FormInput: React.FC<FormInputType> = ({
               placeholder="Selecione uma data"
               readOnly
               disabled={isDisabled}
+              style={inputStyles}
             />
           </PopoverTrigger>
           <PopoverContent className="p-0">
@@ -162,6 +170,17 @@ const FormInput: React.FC<FormInputType> = ({
         </Popover>
       )}
 
+      {inputType === "time" && (
+        <Input
+          type="time"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Selecione uma hora"
+          disabled={isDisabled}
+          style={inputStyles}
+        />
+      )}
+
       {inputType === "text" && (
         <Input
           type="text"
@@ -169,6 +188,7 @@ const FormInput: React.FC<FormInputType> = ({
           onChange={(e) => handleChange(e.target.value)}
           placeholder="Digite algo"
           disabled={isDisabled}
+          style={inputStyles}
         />
       )}
     </div>

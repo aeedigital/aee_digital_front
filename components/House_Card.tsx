@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+
+import {Quiz, Question} from '@/interfaces/form.interface'
+
 import {
   Card,
   CardContent,
@@ -8,27 +11,15 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import FormInput from './FormInput';
+import { Centro } from '@/interfaces/centro.interface';
 
-type Centro = {
-  _id: string;
-  NOME_CENTRO: string;
-  NOME_CURTO: string;
-  auto_avaliacao: string;
-  data_avaliacao: string;
-}
-
-type QUESTION = {
-  _id: string;
-  PRESET_VALUES: string[];
-  QUESTION: string;
-  ANSWER_TYPE: string;
-}
 
 interface CardProps {
   centro: Centro;
-  avaliacao_question: QUESTION ;
-  coordenador_questions: QUESTION[];
+  avaliacao_question: Question ;
+  coordenador_questions: Question[];
   required_questions?: string[];
+  form: any;
 }
 
 const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenador_questions, form }) => {
@@ -89,9 +80,9 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
       
         const questions: any[] = [];
     
-        form.PAGES.forEach(page=>{
-          page.QUIZES.forEach(quiz=>{
-            quiz.QUESTIONS.forEach(questionGroup=>{
+        form.PAGES.forEach((quiz: { QUIZES: Quiz[]; })=>{
+          quiz.QUIZES.forEach(group=>{
+            group.QUESTIONS.forEach(questionGroup=>{
               questionGroup.GROUP.forEach(q=>{
                 if(q.IS_REQUIRED)
                 questions.push(q)
@@ -110,7 +101,7 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
           hasResponse = hasResponse[hasResponse.length -1]; 
     
           if(!hasResponse  ||  hasResponse?.ANSWER?.trim().length == 0){
-            not_finished.push(question.QUESTION)
+            not_finished.push(question.Question)
           }
           
         });

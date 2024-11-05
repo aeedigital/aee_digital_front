@@ -12,8 +12,8 @@ export async function Auth(user: string, pass: string): Promise<Authorization>{
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
 
-    let role = userInfo.groups[0];
-    let scope = userInfo.scope_id != "*" ? userInfo.scope_id : undefined
+    let role = userInfo?.groups[0];
+    let scope = userInfo?.scope_id != "*" ? userInfo?.scope_id : undefined
 
     return {
         scope,
