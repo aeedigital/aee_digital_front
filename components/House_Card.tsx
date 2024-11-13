@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
 import {Quiz, Question} from '@/interfaces/form.interface'
+import { useRouter } from 'next/navigation';
+
 
 import {
   Card,
@@ -16,7 +18,7 @@ import { Centro } from '@/interfaces/centro.interface';
 
 interface CardProps {
   centro: Centro;
-  avaliacao_question: Question ;
+  avaliacao_question: Question;
   coordenador_questions: Question[];
   required_questions?: string[];
   form: any;
@@ -27,6 +29,8 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
   const [participacao, setParticipacao] = useState<string>('');
   const [situacao, setSituacao] = useState<string>('');
   const [questoes_coordenador, setCoordenadorQuestoes]= useState<any[]>([])
+
+  const router = useRouter();
 
   async function getQuestionAnswer(questionId:string, centroId:string){
     const res = await fetch(`/api/answers?QUESTION_ID=${questionId}&CENTRO_ID=${centroId}`);
@@ -140,8 +144,9 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
     }
     return 'bg-white';
   };
-
   const handleCardClick = () => {
+    // Navega para a rota summary_coord com o ID do regional
+    router.push(`/summary/${centro._id}`);
   };
 
   return (

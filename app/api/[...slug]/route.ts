@@ -1,3 +1,4 @@
+import Error from 'next/error';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Rota GET genérica que faz uma chamada para uma API externa
@@ -31,8 +32,9 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
 
     // Retornando a resposta da API externa
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error:any) {
+
     // Capturando e retornando erros caso a requisição falhe
-    return NextResponse.json({ error: 'Error fetching from external API', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Error fetching from external API', details: error?.message }, { status: 500 });
   }
 }

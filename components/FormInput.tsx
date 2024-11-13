@@ -41,6 +41,7 @@ const FormInput: React.FC<FormInputType> = ({
   const [value, setValue] = useState(initialValue);
   const [isEmpty, setIsEmpty] = useState(isRequired && !initialValue);
 
+
   useEffect(() => {
     setValue(initialValue);
     setIsEmpty(isRequired && !initialValue);
@@ -153,7 +154,7 @@ const FormInput: React.FC<FormInputType> = ({
           <PopoverTrigger asChild>
             <Input
               type="text"
-              value={value ? format(value, "dd/MM/yyyy") : ""}
+              value={value.length>0 ? format(value, "dd/MM/yyyy") : ""}
               placeholder="Selecione uma data"
               readOnly
               disabled={isDisabled}
@@ -163,7 +164,7 @@ const FormInput: React.FC<FormInputType> = ({
           <PopoverContent className="p-0">
             <Calendar
               selected={value}
-              onSelect={(date) => handleChange(date)}
+              onSelect={(date: any) => handleChange(date)}
               disabled={isDisabled}
             />
           </PopoverContent>

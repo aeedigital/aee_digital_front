@@ -22,6 +22,13 @@ export interface Page {
   PAGE_NAME: string;
 }
 
+export interface Answer {
+  CENTRO_ID: string;
+  QUIZ_ID: string;
+  QUESTION_ID: string;
+  ANSWER: string;
+}
+
 export interface Form {
   _id: string;
   NAME: string;

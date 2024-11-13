@@ -2,10 +2,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import styles from './summary_coord.module.css';
-import FormInput from '@/components/FormInput';
-import House_Card from '@/components/House_Card';
 
+import House_Card from '@/components/House_Card';
+import { Question} from '@/interfaces/form.interface'
 
 
 export default function MainPage({params}:any) {
@@ -17,8 +16,20 @@ export default function MainPage({params}:any) {
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
   const hasLoadedRef = useRef(false); // Use useRef instead of useState
-  const [avaliacaoQuestion, setAvaliacaoQuestion] = useState({})
-  const [questoes_coordenador, setCoordenadorQuestoes]= useState({})
+  const [avaliacaoQuestion, setAvaliacaoQuestion] = useState<Question >({
+    _id: "",
+  QUESTION: "",
+  ANSWER_TYPE: "String",
+  IS_REQUIRED: false,
+  PRESET_VALUES: []
+  })
+  const [questoes_coordenador, setCoordenadorQuestoes]= useState<Question[]>([{
+    _id: "",
+  QUESTION: "",
+  ANSWER_TYPE: "String",
+  IS_REQUIRED: false,
+  PRESET_VALUES: []
+  }])
   const [formulario, setFormulario] = useState({})
 
 

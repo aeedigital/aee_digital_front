@@ -2,28 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Skeleton } from "@/components/ui/skeleton"
+
 import { QuizComponent } from '@components/QuizComponent';
 import {Page} from '@/interfaces/form.interface'
 
 
-const fetchData = async (): Promise<Page[]> => {
-  const response = await fetch(`/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`).then((res) =>
-    res.json()
-  );
-  return response[0].PAGES;
-};
 
 export default function DynamicPage({params}:any) {
   const { centroId } = params;
 
   const [pages, setPages] = useState<Page[]>([]);
+  const [answers, setAnswers] = useState([]);
 
   useEffect(() => {
-    fetchData().then(setPages);
-  }, []);
+    async function fetchData(){
+      const [formResponse, answerResponse] = await Promise.all([
+        fetch(`/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`).then((res) =>
+          res.json()),
+        fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) =>
+          res.json())
+      ])
+  
+      setAnswers(answerResponse);
+      setPages(formResponse[0].PAGES)
+    };
+    fetchData();
+  }, [centroId]);
 
 
-  if (!pages.length) return <div>Carregando...</div>;
+  if (!pages.length) return     <div className="flex flex-col space-y-3">
+  <Skeleton className="h-[125px] w-[250px] rounded-xl" />
+  <div className="space-y-2">
+    <Skeleton className="h-4 w-[250px]" />
+    <Skeleton className="h-4 w-[200px]" />
+  </div>
+</div>;
 
   return (
     <Tabs defaultValue={pages[0].PAGE_NAME} className="w-full p-6">
@@ -43,6 +57,7 @@ export default function DynamicPage({params}:any) {
                 key={quizIndex}
                 centroId = {centroId}
                 quiz={quiz}
+                answers = {answers}
               />
             ))}
           </div>

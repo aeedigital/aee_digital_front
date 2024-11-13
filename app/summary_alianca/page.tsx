@@ -2,15 +2,12 @@ import React from 'react';
 import Regional_Card from '../../components/Regional_Card';
 import { appendDatePeriod, Period } from '../helpers/datePeriodHelper'
 
-
 async function getRegionais(period: Period) {
-  
-
   let apiPath = 'http://162.214.123.133:5000/regionais';
 
   appendDatePeriod(apiPath, period)
 
-  let res = await fetch(apiPath);
+  let res = await fetch(apiPath, { cache: 'no-store' });
    
   if (!res.ok) {
     throw new Error('Failed to fetch data');
@@ -21,6 +18,7 @@ async function getRegionais(period: Period) {
   const sortedRegionais = regionaisData.sort((a: Regional, b: Regional) => 
     a.NOME_REGIONAL.localeCompare(b.NOME_REGIONAL)
   );
+
    
   return sortedRegionais;
 }
