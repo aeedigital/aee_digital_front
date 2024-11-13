@@ -29,7 +29,10 @@ export default function LoginPage() {
       if (auth) {
         const { role, scope } = auth;
         Cookies.set('userType', role);
-        Cookies.set('scope', scope);
+
+        if(scope){
+          Cookies.set('scope', scope);
+        }
 
         const initialPage = getInitialPage(role, scope);
         if(!initialPage){

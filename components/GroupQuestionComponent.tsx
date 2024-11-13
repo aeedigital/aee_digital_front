@@ -137,15 +137,10 @@ export function GroupQuestionComponent({ questionGroup, centroId, answers }: Que
 
         for (let j = 0; j < keys.length; j++) {
           const questionIndex = keys[j];  
-          console.log("QUESTION INDEX", questionIndex)
 
           let questionInfo:any = answersByQuestion[questionIndex];
           
-          console.log("QUESTION INFO", questionInfo)
-          
           const item:any = questionInfo[i];
-
-          console.log("ITEM", item)
 
           const {question, answers} = item;
 

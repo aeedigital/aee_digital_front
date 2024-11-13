@@ -2,7 +2,7 @@ import {UserRole} from './permitions'
 
 export type Authorization = {
     role: UserRole;
-    scope: string;
+    scope?: string;
 }
 
 export async function Auth(user: string, pass: string): Promise<Authorization>{
@@ -13,8 +13,12 @@ export async function Auth(user: string, pass: string): Promise<Authorization>{
     // const {groups: [role], scope_id: scope} = userInfo
 
     let role = userInfo?.groups[0];
-    let scope = userInfo?.scope_id != "*" ? userInfo?.scope_id : undefined
-
+    let scope
+    
+    if(userInfo?.scope_id != "*")
+    {
+        scope = userInfo?.scope_id
+    }
     return {
         scope,
         role
