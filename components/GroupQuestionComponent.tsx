@@ -1,209 +1,136 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from 'react';
-import { QuestionComponent } from './QuestionComponent';
-import { Question, QuestionGroup, Answer } from '@/interfaces/form.interface';
-import { useToast } from "@/hooks/use-toast"
+import { useEffect, useState } from "react";
+import { QuestionComponent } from "./QuestionComponent";
+import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
+import { useToast } from "@/hooks/use-toast";
+import { FiPlus, FiTrash } from "react-icons/fi";
 
 interface QuestionProps {
   questionGroup: QuestionGroup;
   centroId: string;
-  answers: any[]
+  answers: any[];
 }
 
-interface QuestionAnswer{
-  question: Question,
-  answer: Answer
+interface QuestionAnswer {
+  question: Question;
+  answer: Answer;
 }
 
 interface QuestionAnswerGroup {
-  questionsAnswered: QuestionAnswer[]
+  questionsAnswered: QuestionAnswer[];
 }
 
 export function GroupQuestionComponent({ questionGroup, centroId, answers }: QuestionProps) {
-  const { toast } = useToast()
-
-  // console.log("ANSWERS", answers)
-
-  // tem o array por que pode ter varias respostas se for multiple
+  const { toast } = useToast();
   const [answerGroups, setAnswerGroups] = useState<QuestionAnswerGroup[]>([]);
 
   const handleAddGroup = () => {
-    const emptyAnswerGroup = getEmptyQuestionGroup()
+    const emptyAnswerGroup = getEmptyQuestionGroup();
     setAnswerGroups((prevGroups) => [...prevGroups, { ...emptyAnswerGroup }]);
   };
 
   const handleRemoveGroup = (index: number) => {
     if (answerGroups.length > 1) {
       setAnswerGroups(answerGroups.filter((_, i) => i !== index));
-    }else{
+    } else {
       toast({
         title: "Não Permitido",
         variant: "destructive",
         description: "É necessário ter pelo menos uma resposta",
-      })
+      });
     }
   };
 
-  function getEmptyQuestionGroup(){
-
+  function getEmptyQuestionGroup() {
     let newGroup: QuestionAnswerGroup = {
-      questionsAnswered:[]
-    }
+      questionsAnswered: [],
+    };
 
-    const {GROUP} = questionGroup;
-
-    for (let index = 0; index < GROUP.length; index++) {
-      const question = GROUP[index];
-
-      const emptyQuestion = {
+    questionGroup.GROUP.forEach((question) => {
+      newGroup.questionsAnswered.push({
         question,
         answer: {
           CENTRO_ID: centroId,
           QUIZ_ID: "",
           QUESTION_ID: "",
-          ANSWER: " "
-        }
-      }
-
-      newGroup.questionsAnswered.push(emptyQuestion)
-    }
+          ANSWER: "",
+        },
+      });
+    });
 
     return newGroup;
   }
 
-  async function getAnswerByQuestionId(questionId:string): Promise<Answer[]>{
-    return answers.filter((answer)=>{
-      return answer.QUESTION_ID == questionId
-    })
+  async function getAnswerByQuestionId(questionId: string): Promise<Answer[]> {
+    return answers.filter((answer) => answer.QUESTION_ID === questionId);
   }
 
-  useEffect(()=>{
-    async function fetchAnswers(){
-      // let answerGroup: QuestionAnswerGroup= getEmptyQuestionGroup();
+  useEffect(() => {
+    async function fetchAnswers() {
+      const tempAnswerGroups: QuestionAnswerGroup[] = [];
+      const answersByQuestion: Record<string, any[]> = {};
 
-      const tempAnswerGroup: QuestionAnswerGroup[] = []
-
-      const { GROUP, IS_MULTIPLE } = questionGroup;
-
-      let answersByQuestion:any = {}
-  
-      for (let index = 0; index < GROUP.length; index++) {
-        const question = GROUP[index];
-        const {_id: questionId } = question
-
-        const data = await getAnswerByQuestionId(questionId)
-
-        console.log("ANSWERS", data)
-
-        if(!answersByQuestion[question._id]){
-          answersByQuestion[question._id] =[]
-        }
-
-
-        let objectToAdd;
-        if(IS_MULTIPLE){
-         objectToAdd = {
-            question,
-            answers:data
-          }
-        }
-        else{
-          objectToAdd = {
-            question,
-            answers:[data[0]]
-          }
-        }
-        answersByQuestion[question._id].push(objectToAdd)
-      
+      for (const question of questionGroup.GROUP) {
+        const data = await getAnswerByQuestionId(question._id);
+        answersByQuestion[question._id] = data;
       }
 
-      console.table("BY QUESTION", answersByQuestion)
-
-      //partindo da premissa que todas as questoes do grupo tem resposta.
-      
-      const keys = Object.keys(answersByQuestion);
-      const items = Object.values(answersByQuestion);
-
-      const firstQuestion:any = items[0]
-      const answersLength = firstQuestion.length;
-
-      console.log(keys,items, answersLength)
+      const answersLength = Math.max(...Object.values(answersByQuestion).map((a) => a.length), 1);
 
       for (let i = 0; i < answersLength; i++) {
-        let answerGroup: QuestionAnswerGroup= {
-          questionsAnswered:[]
-        }
+        const group: QuestionAnswerGroup = { questionsAnswered: [] };
 
-        for (let j = 0; j < keys.length; j++) {
-          const questionIndex = keys[j];  
-
-          let questionInfo:any = answersByQuestion[questionIndex];
-          
-          const item:any = questionInfo[i];
-
-          const {question, answers} = item;
-
-          const answer = answers[i];
-
-          let questionAnswerToAdd: QuestionAnswer={
-            question,
-            answer:answer || {
-              CENTRO_ID: centroId,
-              QUIZ_ID: "",
-              QUESTION_ID: "",
-              ANSWER: " "
-            }
+        questionGroup.GROUP.forEach((question) => {
+          const answer = answersByQuestion[question._id]?.[i] || {
+            CENTRO_ID: centroId,
+            QUIZ_ID: "",
+            QUESTION_ID: "",
+            ANSWER: "",
           };
+          group.questionsAnswered.push({ question, answer });
+        });
 
-          answerGroup.questionsAnswered.push(questionAnswerToAdd)
-          
-        }
-        tempAnswerGroup.push(answerGroup)
+        tempAnswerGroups.push(group);
       }
 
-
-      setAnswerGroups(tempAnswerGroup)
+      setAnswerGroups(tempAnswerGroups);
     }
 
     fetchAnswers();
-  }, [questionGroup])
+  }, [questionGroup, answers, centroId]);
 
   return (
-    <div className="space-y-4">
-      {/* {questionGroups.map((group, groupIndex) => ( */}
-      { answerGroups?.map((group, groupIndex) =>(
-
-        <div key={groupIndex} className="space-y-4 relative">
-          {group && (
-            <div className="flex flex-wrap gap-4">
-              {group.questionsAnswered.map((questionAnswered: QuestionAnswer, questionIndex) => (
-                <QuestionComponent
-                  key={questionIndex}
-                  centroId={centroId}
-                  answer = {questionAnswered.answer}
-                  question={questionAnswered.question}
-                  questionIndex={questionIndex}
-                />
-              ))}
-            </div>
-          )}
+    <div className="space-y-6">
+      {answerGroups.map((group, groupIndex) => (
+        <div key={groupIndex} className="relative space-y-4 border p-4 rounded-md shadow-sm">
+          <div className="flex flex-wrap gap-4">
+            {group.questionsAnswered.map((questionAnswered, questionIndex) => (
+              <QuestionComponent
+                key={questionIndex}
+                centroId={centroId}
+                answer={questionAnswered.answer}
+                question={questionAnswered.question}
+                questionIndex={questionIndex}
+              />
+            ))}
+          </div>
 
           {questionGroup.IS_MULTIPLE && (
-            <div className="absolute top-0 right-0 flex space-x-2">
+            <div className="absolute -top-2 right-2 flex space-x-2">
               <button
                 type="button"
-                className="px-2 py-1 bg-green-500 text-white rounded"
+                className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600"
                 onClick={handleAddGroup}
               >
-                Adicionar
+                <FiPlus className="h-5 w-5" />
               </button>
               <button
                 type="button"
-                className="px-2 py-1 bg-red-500 text-white rounded"
+                className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                 onClick={() => handleRemoveGroup(groupIndex)}
               >
-                Remover
+                <FiTrash className="h-5 w-5" />
               </button>
             </div>
           )}

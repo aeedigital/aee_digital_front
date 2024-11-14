@@ -9,7 +9,7 @@ interface QuestionProps {
 }
 
 interface Answer {
-		// _id: string;
+		_id: string;
 		CENTRO_ID: string;
 		QUIZ_ID: string;
 		QUESTION_ID: string;
@@ -18,54 +18,20 @@ interface Answer {
 
 
 export function QuestionComponent({ question, centroId, questionIndex, answer }: QuestionProps) {
-  const [initialValue, setInitialValue] = useState<any>(null);
-  // const [answer, setAnswer] = useState<Answer>({
-  //   _id: "",
-	// 	CENTRO_ID: "",
-	// 	QUIZ_ID: "",
-	// 	QUESTION_ID: "",
-	// 	ANSWER: ""
-  // })
-
+  const [value, setInitialValue] = useState<any>(answer.ANSWER);
 
   const {_id: questionId} = question
-
-  // // Função para buscar a resposta da API
-  useEffect(() => {
-    // const fetchAnswer = async () => {
-    //   try {
-
-    //     const response = await fetch(`/api/answers?QUESTION_ID=${questionId}&CENTRO_ID=${centroId}`);
-    //     if (!response.ok) {
-    //       throw new Error('Erro ao buscar dados da API');
-    //     }
-    //     let data = await response.json();
-
-    //     data = data[0];
-    //     setAnswer(data);
-
-    //     setInitialValue(data?.ANSWER || '');
-    //   } catch (error) {
-    //     console.error('Erro ao carregar a resposta:', error);
-    //     setInitialValue('');
-    //   } 
-    // };
-
-    // fetchAnswer();
-
-    setInitialValue(answer.ANSWER)
-  }, [questionId, centroId]);
-
 
   // Função para atualizar a resposta da API usando PUT com query parameters
   async function onInputChange(name: string, value: any): Promise<void> {
     try {
       // Atualiza o estado imediatamente para refletir a mudança no UI
-      setInitialValue(value);
+
+
 
       // Envia a atualização para a API com os parâmetros na URL
       const response = await fetch(
-        `/api/answers?questionId=${questionId}&centroId=${centroId}&answerId=${answer._id}`, 
+        `http://localhost:5000/answers?questionId=${questionId}&centroId=${centroId}&answerId=${answer._id}`, 
         {
           method: 'PUT',
           headers: {
@@ -82,6 +48,9 @@ export function QuestionComponent({ question, centroId, questionIndex, answer }:
       }
 
       console.log('Resposta atualizada com sucesso');
+      console.log("CHANGE", name, value)
+
+      setInitialValue(value);
     } catch (error) {
       console.error('Erro ao atualizar a resposta:', error);
     }
@@ -93,7 +62,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer }:
       <FormInput
         type={question.ANSWER_TYPE.toLowerCase()}
         name={`${question._id}-${questionIndex}`}
-        value={answer.ANSWER}
+        value={value}
         onChange={onInputChange}
         options={question.PRESET_VALUES}
         isDisabled={false}
