@@ -41,16 +41,18 @@ const FormInput: React.FC<FormInputType> = ({
   const [value, setValue] = useState(initialValue);
   const [isEmpty, setIsEmpty] = useState(isRequired && !initialValue);
 
-
   useEffect(() => {
     setValue(initialValue);
     setIsEmpty(isRequired && !initialValue);
   }, [initialValue, isRequired]);
 
+  const handleBlur = () => {
+    onChange(name, value); // Dispara a alteração ao perder o foco
+  };
+
   const handleChange = (newValue: any) => {
-    setValue(newValue);
+    setValue(newValue); // Apenas atualiza o estado local
     setIsEmpty(isRequired && !newValue);
-    onChange(name, newValue);
   };
 
   const getInputType = () => {
@@ -113,6 +115,7 @@ const FormInput: React.FC<FormInputType> = ({
         <Textarea
           value={value}
           onChange={(e) => handleChange(e.target.value)}
+          onBlur={handleBlur} // Dispara ao perder o foco
           placeholder="Digite algo..."
           disabled={isDisabled}
           style={inputStyles}
@@ -123,6 +126,7 @@ const FormInput: React.FC<FormInputType> = ({
         <Checkbox
           checked={value}
           onCheckedChange={(checked) => handleChange(checked)}
+          onBlur={handleBlur} // Chama ao perder o foco
           disabled={isDisabled}
         />
       )}
@@ -131,6 +135,7 @@ const FormInput: React.FC<FormInputType> = ({
         <RadioGroup
           value={value}
           onValueChange={(val) => handleChange(val)}
+          onBlur={handleBlur} // Chama ao perder o foco
           disabled={isDisabled}
         >
           {options.map((option) => (
@@ -144,7 +149,8 @@ const FormInput: React.FC<FormInputType> = ({
       {inputType === "switch" && (
         <Switch
           checked={value}
-          onCheckedChange={handleChange}
+          onCheckedChange={(checked) => handleChange(checked)}
+          onBlur={handleBlur} // Chama ao perder o foco
           disabled={isDisabled}
         />
       )}
@@ -154,9 +160,10 @@ const FormInput: React.FC<FormInputType> = ({
           <PopoverTrigger asChild>
             <Input
               type="text"
-              value={value.length>0 ? format(value, "dd/MM/yyyy") : ""}
+              value={value.length > 0 ? format(value, "dd/MM/yyyy") : ""}
               placeholder="Selecione uma data"
               readOnly
+              onBlur={handleBlur} // Dispara ao perder o foco
               disabled={isDisabled}
               style={inputStyles}
             />
@@ -176,6 +183,7 @@ const FormInput: React.FC<FormInputType> = ({
           type="time"
           value={value}
           onChange={(e) => handleChange(e.target.value)}
+          onBlur={handleBlur} // Dispara ao perder o foco
           placeholder="Selecione uma hora"
           disabled={isDisabled}
           style={inputStyles}
@@ -187,6 +195,7 @@ const FormInput: React.FC<FormInputType> = ({
           type="text"
           value={value}
           onChange={(e) => handleChange(e.target.value)}
+          onBlur={handleBlur} // Dispara ao perder o foco
           placeholder="Digite algo"
           disabled={isDisabled}
           style={inputStyles}

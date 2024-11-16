@@ -13,18 +13,18 @@ export default function DynamicPage({params}:any) {
   const { centroId } = params;
 
   const [pages, setPages] = useState<Page[]>([]);
-  const [answers, setAnswers] = useState([]);
 
   useEffect(() => {
     async function fetchData(){
-      const [formResponse, answerResponse] = await Promise.all([
-        fetch(`/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`).then((res) =>
-          res.json()),
-        fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) =>
+      // const [formResponse, answerResponse] = await Promise.all([
+      //   fetch(`/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`).then((res) =>
+      //     res.json()),
+      //   fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) =>
+      //     res.json())
+      // ])
+      const formResponse = await fetch(`/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`).then((res) =>
           res.json())
-      ])
   
-      setAnswers(answerResponse);
       setPages(formResponse[0].PAGES)
     };
     fetchData();
@@ -57,7 +57,6 @@ export default function DynamicPage({params}:any) {
                 key={quizIndex}
                 centroId = {centroId}
                 quiz={quiz}
-                answers = {answers}
               />
             ))}
           </div>

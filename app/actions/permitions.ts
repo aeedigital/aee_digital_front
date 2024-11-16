@@ -16,18 +16,12 @@ const initialPage: Record<UserRole, string> ={
 export function getInitialPage(userRole: UserRole, scope: string | undefined){
   let pagePath = initialPage[userRole]
 
-  console.log("SCOPE", scope)
-
   let path;
   if(scope != undefined){
-    console.log("ENTROU", typeof scope)
     path = `${pagePath}/${scope}`
   }else{
     path = pagePath
   }
-
-  console.log(pagePath, path, scope)
-
   return path
 }
 

@@ -151,7 +151,7 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
 
   return (
     <Card
-    className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
+    className={`m-4 w-64 border border-gray-300 cursor-pointer rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
     onClick={handleCardClick}
     >
       <CardHeader>

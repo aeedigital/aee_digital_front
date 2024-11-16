@@ -9,7 +9,6 @@ import { FiPlus, FiTrash } from "react-icons/fi";
 interface QuestionProps {
   questionGroup: QuestionGroup;
   centroId: string;
-  answers: any[];
 }
 
 interface QuestionAnswer {
@@ -21,18 +20,37 @@ interface QuestionAnswerGroup {
   questionsAnswered: QuestionAnswer[];
 }
 
-export function GroupQuestionComponent({ questionGroup, centroId, answers }: QuestionProps) {
+export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProps) {
   const { toast } = useToast();
   const [answerGroups, setAnswerGroups] = useState<QuestionAnswerGroup[]>([]);
 
+  const initializeEmptyGroups = () => {
+    const emptyGroups: QuestionAnswerGroup[] = [];
+    // Create a single empty group initially
+    const emptyGroup: QuestionAnswerGroup = {
+      questionsAnswered: questionGroup.GROUP.map((question) => ({
+        question,
+        answer: {
+          CENTRO_ID: centroId,
+          QUIZ_ID: "",
+          QUESTION_ID: question._id,
+          ANSWER: "",
+        },
+      })),
+    };
+    emptyGroups.push(emptyGroup);
+
+    return emptyGroups;
+  };
+
   const handleAddGroup = () => {
-    const emptyAnswerGroup = getEmptyQuestionGroup();
-    setAnswerGroups((prevGroups) => [...prevGroups, { ...emptyAnswerGroup }]);
+    const newEmptyGroup = initializeEmptyGroups()[0]; // Create one empty group
+    setAnswerGroups((prevGroups) => [...prevGroups, newEmptyGroup]);
   };
 
   const handleRemoveGroup = (index: number) => {
     if (answerGroups.length > 1) {
-      setAnswerGroups(answerGroups.filter((_, i) => i !== index));
+      setAnswerGroups((prevGroups) => prevGroups.filter((_, i) => i !== index));
     } else {
       toast({
         title: "Não Permitido",
@@ -42,63 +60,43 @@ export function GroupQuestionComponent({ questionGroup, centroId, answers }: Que
     }
   };
 
-  function getEmptyQuestionGroup() {
-    let newGroup: QuestionAnswerGroup = {
-      questionsAnswered: [],
-    };
-
-    questionGroup.GROUP.forEach((question) => {
-      newGroup.questionsAnswered.push({
-        question,
-        answer: {
-          CENTRO_ID: centroId,
-          QUIZ_ID: "",
-          QUESTION_ID: "",
-          ANSWER: "",
-        },
-      });
-    });
-
-    return newGroup;
-  }
-
-  async function getAnswerByQuestionId(questionId: string): Promise<Answer[]> {
-    return answers.filter((answer) => answer.QUESTION_ID === questionId);
-  }
-
   useEffect(() => {
     async function fetchAnswers() {
       const tempAnswerGroups: QuestionAnswerGroup[] = [];
       const answersByQuestion: Record<string, any[]> = {};
 
+      // Simulate fetching answers (replace with real API calls)
       for (const question of questionGroup.GROUP) {
-        const data = await getAnswerByQuestionId(question._id);
-        answersByQuestion[question._id] = data;
+        const fetchedAnswers = await fetch(`/api/answers?CENTRO_ID=${centroId}&QUESTION_ID=${question._id}`).then((res) => res.json());
+        answersByQuestion[question._id] = fetchedAnswers;
       }
+
 
       const answersLength = Math.max(...Object.values(answersByQuestion).map((a) => a.length), 1);
 
+
       for (let i = 0; i < answersLength; i++) {
-        const group: QuestionAnswerGroup = { questionsAnswered: [] };
+        const group: QuestionAnswerGroup = {
+          questionsAnswered: questionGroup.GROUP.map((question) => {
+            const answer = answersByQuestion[question._id]?.[i] || {
+              CENTRO_ID: centroId,
+              QUIZ_ID: "",
+              QUESTION_ID: question._id,
+              ANSWER: "",
+            };
 
-        questionGroup.GROUP.forEach((question) => {
-          const answer = answersByQuestion[question._id]?.[i] || {
-            CENTRO_ID: centroId,
-            QUIZ_ID: "",
-            QUESTION_ID: "",
-            ANSWER: "",
-          };
-          group.questionsAnswered.push({ question, answer });
-        });
-
+            return { question, answer };
+          })
+        };
         tempAnswerGroups.push(group);
       }
-
       setAnswerGroups(tempAnswerGroups);
     }
 
+    // Initialize with empty groups and then fetch answers
+    setAnswerGroups(initializeEmptyGroups());
     fetchAnswers();
-  }, [questionGroup, answers, centroId]);
+  }, [questionGroup, centroId]);
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import FormInput from '@/components/FormInput';
+import { Answer } from '@/interfaces/form.interface';
 
 interface QuestionProps {
   question: any;
@@ -8,23 +9,22 @@ interface QuestionProps {
   answer: Answer 
 }
 
-interface Answer {
-		_id: string;
-		CENTRO_ID: string;
-		QUIZ_ID: string;
-		QUESTION_ID: string;
-		ANSWER: string ;
-	}
-
-
 export function QuestionComponent({ question, centroId, questionIndex, answer }: QuestionProps) {
-  const [value, setInitialValue] = useState<any>(answer.ANSWER);
+  const [value, setValue] = useState<any>(answer.ANSWER);
 
   const {_id: questionId} = question
+
+  useEffect(() => {
+    setValue(answer.ANSWER);
+  }, [answer.ANSWER]);
 
   // Função para atualizar a resposta da API usando PUT com query parameters
   async function onInputChange(name: string, value: any): Promise<void> {
     try {
+
+      console.log("ANSWER", {
+        ANSWER: String(value),
+      })
       // Atualiza o estado imediatamente para refletir a mudança no UI
 
 
@@ -38,7 +38,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer }:
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            ANSWER: value,
+            ANSWER: String(value),
           }),
         }
       );
@@ -47,10 +47,9 @@ export function QuestionComponent({ question, centroId, questionIndex, answer }:
         throw new Error('Erro ao atualizar a resposta na API');
       }
 
-      console.log('Resposta atualizada com sucesso');
-      console.log("CHANGE", name, value)
+      console.log('Resposta atualizada com sucesso', response);
 
-      setInitialValue(value);
+      setValue(value);
     } catch (error) {
       console.error('Erro ao atualizar a resposta:', error);
     }

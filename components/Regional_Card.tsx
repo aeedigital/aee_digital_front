@@ -23,7 +23,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId }) => {
 
   useEffect(() => {
     async function fetchCentrosCount() {
-      const res = await fetch(`http://162.214.123.133:5000/centros/?REGIONAL=${regionalId}`);
+      const res = await fetch(`http://localhost:5000/centros/?REGIONAL=${regionalId}`);
       
       if (!res.ok) {
         console.error(`Failed to fetch centers for regional ${regionalId}`);
@@ -33,7 +33,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId }) => {
       const centros = await res.json();
       setCentrosCount(centros.length);
 
-      const summaryRes = await fetch(`http://162.214.123.133:5000/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`);
+      const summaryRes = await fetch(`http://localhost:5000/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`);
       const data = await summaryRes.json();
 
       const uniqueCentroIds = new Set(data.map((item: any) => item.CENTRO_ID));

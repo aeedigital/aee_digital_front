@@ -3,7 +3,7 @@ import Regional_Card from '../../components/Regional_Card';
 import { appendDatePeriod, Period } from '../helpers/datePeriodHelper'
 
 async function getRegionais(period: Period) {
-  let apiPath = 'http://162.214.123.133:5000/regionais';
+  let apiPath = 'http://localhost:5000/regionais';
 
   appendDatePeriod(apiPath, period)
 
