@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import {Quiz, Question} from '@/interfaces/form.interface'
+import {Quiz, Question, Answer} from '@/interfaces/form.interface'
 import { useRouter } from 'next/navigation';
 
 
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card"
 import FormInput from './FormInput';
 import { Centro } from '@/interfaces/centro.interface';
+import { QuestionComponent } from './QuestionComponent';
 
 
 interface CardProps {
@@ -22,6 +23,11 @@ interface CardProps {
   coordenador_questions: Question[];
   required_questions?: string[];
   form: any;
+}
+
+interface QuestionAnswer {
+  question: Question;
+  answer: Answer;
 }
 
 const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenador_questions, form }) => {
@@ -53,26 +59,28 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
 
   useEffect(()=>{
     async function fetchInfo(){
-      const coordenarorquestionsInfo:any[] = []
+      const coordenarorquestionsInfo:QuestionAnswer[] = []
   
       for (let index = 0; index < coordenador_questions.length; index++) {
         const question = coordenador_questions[index];
         const answer = await getQuestionAnswer(question._id, centro._id)
-        const questionInfo = {
-          question:question.QUESTION,
-          answer: answer.ANSWER || '',
-          answer_type: question.ANSWER_TYPE,
-          preset_values: question.PRESET_VALUES
+
+        const questionAnswered:QuestionAnswer = {
+          question,
+          answer
         }
-        coordenarorquestionsInfo.push(questionInfo)
+
+        coordenarorquestionsInfo.push(questionAnswered)
       }
 
       setCoordenadorQuestoes(coordenarorquestionsInfo)
+
+      console.log("QUestions", coordenarorquestionsInfo)
     }
 
     fetchInfo()
 
-  },[])
+  },[centro._id, coordenador_questions])
 
   
 
@@ -130,29 +138,54 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
   };
 
   const getBackgroundColor = () => {
-    const avaliacaoPreenchida = situacao !== '';
-    const participacaoPreenchida = participacao !== '';
+    let questions = 0;
+    let answered = 0;
 
-    if (!avaliacaoPreenchida && !participacaoPreenchida) {
+    const todasQuestoesCoordenadorPreenchidas = questoes_coordenador.every(
+      (qa) => {
+        questions++
+        const hasAnswer = qa.answer?.ANSWER?.trim().length > 0
+        
+        if(hasAnswer){
+          answered++;
+        }
+        return hasAnswer}
+    );
+
+    const percentage = 100* (answered / questions);
+    
+    const okThreshold = 50;
+    const completeThreshold = 100
+
+    if (percentage< okThreshold) {
       return 'bg-red-200';
     }
-    if (avaliacaoPreenchida || participacaoPreenchida) {
+    if (percentage > okThreshold  && percentage < completeThreshold) {
       return 'bg-yellow-200';
     }
-    if (avaliacaoPreenchida && participacaoPreenchida) {
+    if (percentage == completeThreshold) {
       return 'bg-green-200';
     }
     return 'bg-white';
   };
+
   const handleCardClick = () => {
     // Navega para a rota summary_coord com o ID do regional
     router.push(`/summary/${centro._id}`);
   };
 
+  const handleAnswerChange = (index: number | string, updatedAnswer: Answer) => {
+    const updatedQuestoesCoordenador:QuestionAnswer[] = [...questoes_coordenador];
+    updatedQuestoesCoordenador[index] = {
+      ...updatedQuestoesCoordenador[index],
+      answer: updatedAnswer,
+    };
+    setCoordenadorQuestoes(updatedQuestoesCoordenador);
+  };
+
   return (
     <Card
-    className={`m-4 w-64 border border-gray-300 cursor-pointer rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
-    onClick={handleCardClick}
+    className={`m-4 w-64 border border-gray-300  rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
     >
       <CardHeader>
         <CardTitle>{centro.NOME_CENTRO}</CardTitle>
@@ -160,15 +193,24 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
       </CardHeader>
       <CardContent>
         <div>Avaliação: <FormInput type="text" isDisabled={true} name="situacao" value={situacao} onChange={handleInputChange} options={avaliacao_question.PRESET_VALUES} /></div>
-        {questoes_coordenador.map((info, index) => (
 
-        <div key={index}>{info.question}: <FormInput answerType={info.answer_type} name={info.question} value={info.answer} options={info.preset_values} onChange={handleInputChange} /></div>
+        {questoes_coordenador.map((questionAnswered, index) => (
+        <div key={index}>
+        <QuestionComponent
+          key={index}
+          centroId={centro._id}
+          answer={questionAnswered.answer}
+          question={questionAnswered.question}
+          questionIndex={index}
+          onAnswerChange={handleAnswerChange}
+          />
+        </div>
         ))}
 
         <p>Perguntas Faltantes: {perguntasFaltantes.length}</p>
         </CardContent>
-      <CardFooter>
-        <p className="text-xs">Clique para ver as respostas</p>
+      <CardFooter onClick={handleCardClick}>
+        <p className="text-xs cursor-pointer">Clique para ver as respostas</p>
       </CardFooter>
     </Card>
   );

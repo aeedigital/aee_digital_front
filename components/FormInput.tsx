@@ -97,7 +97,14 @@ const FormInput: React.FC<FormInputType> = ({
   return (
     <div className="space-y-2">
       {inputType === "select" && (
-        <Select value={value} onValueChange={handleChange} disabled={isDisabled}>
+         <div
+         onBlur={() => {
+           onChange(name, value); // Dispara a alteração ao perder o foco
+         }}
+       >
+        <Select value={value} onValueChange={(newValue) => {
+        handleChange(newValue);
+      }} disabled={isDisabled}>
           <SelectTrigger style={inputStyles}>
             <SelectValue placeholder="Selecione uma opção" />
           </SelectTrigger>
@@ -109,6 +116,7 @@ const FormInput: React.FC<FormInputType> = ({
             ))}
           </SelectContent>
         </Select>
+        </div>
       )}
 
       {inputType === "textarea" && (
@@ -155,28 +163,32 @@ const FormInput: React.FC<FormInputType> = ({
         />
       )}
 
-      {inputType === "date" && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Input
-              type="text"
-              value={value.length > 0 ? format(value, "dd/MM/yyyy") : ""}
-              placeholder="Selecione uma data"
-              readOnly
-              onBlur={handleBlur} // Dispara ao perder o foco
-              disabled={isDisabled}
-              style={inputStyles}
-            />
-          </PopoverTrigger>
-          <PopoverContent className="p-0">
-            <Calendar
-              selected={value}
-              onSelect={(date: any) => handleChange(date)}
-              disabled={isDisabled}
-            />
-          </PopoverContent>
-        </Popover>
-      )}
+{inputType === "date" && (
+  <Popover>
+    <PopoverTrigger asChild>
+      <Input
+        type="text"
+        value={value ? format(value, "dd/MM/yyyy") : ""}
+        placeholder="Selecione uma data"
+        readOnly
+        onBlur={handleBlur} // Dispara ao perder o foco
+        disabled={isDisabled}
+        style={inputStyles}
+      />
+    </PopoverTrigger>
+    <PopoverContent className="p-0">
+      <Calendar
+        selected={value}
+        onSelect={(date) => {
+          handleChange(date);
+          onChange(name, date); // Dispara a alteração para o componente pai
+        }}
+        disabled={isDisabled}
+      />
+    </PopoverContent>
+  </Popover>
+)}
+
 
       {inputType === "time" && (
         <Input

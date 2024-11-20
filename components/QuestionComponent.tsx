@@ -5,11 +5,12 @@ import { Answer } from '@/interfaces/form.interface';
 interface QuestionProps {
   question: any;
   centroId: string;
-  questionIndex: number;
+  questionIndex: number|string;
   answer: Answer 
+  onAnswerChange?: (index: number | string, newAnswer: Answer) => void; // Nova prop
 }
 
-export function QuestionComponent({ question, centroId, questionIndex, answer }: QuestionProps) {
+export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange }: QuestionProps) {
   const [value, setValue] = useState<any>(answer.ANSWER);
 
   const {_id: questionId} = question
@@ -25,23 +26,43 @@ export function QuestionComponent({ question, centroId, questionIndex, answer }:
       console.log("ANSWER", {
         ANSWER: String(value),
       })
+
+      let response
+
+      if(answer._id){
+        response = await fetch(
+          `http://localhost:5000/answers?questionId=${questionId}&centroId=${centroId}&answerId=${answer._id}`, 
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ANSWER: String(value),
+            }),
+          }
+        );
+      }else{
+        response = await fetch(
+          `http://localhost:5000/answers`, 
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ANSWER: String(value),
+              CENTRO_ID: centroId,
+              QUESTION_ID: questionId
+            }),
+          }
+        );
+      }
       // Atualiza o estado imediatamente para refletir a mudança no UI
 
 
 
       // Envia a atualização para a API com os parâmetros na URL
-      const response = await fetch(
-        `http://localhost:5000/answers?questionId=${questionId}&centroId=${centroId}&answerId=${answer._id}`, 
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ANSWER: String(value),
-          }),
-        }
-      );
 
       if (!response.ok) {
         throw new Error('Erro ao atualizar a resposta na API');
@@ -50,6 +71,15 @@ export function QuestionComponent({ question, centroId, questionIndex, answer }:
       console.log('Resposta atualizada com sucesso', response);
 
       setValue(value);
+
+      if (onAnswerChange) {
+        const updatedAnswer: Answer = {
+          ...answer,
+          ANSWER: String(value),
+        };
+        onAnswerChange(questionIndex, updatedAnswer);
+      }
+
     } catch (error) {
       console.error('Erro ao atualizar a resposta:', error);
     }
