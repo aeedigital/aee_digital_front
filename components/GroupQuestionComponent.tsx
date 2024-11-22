@@ -72,7 +72,10 @@ export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProp
       }
 
 
-      const answersLength = Math.max(...Object.values(answersByQuestion).map((a) => a.length), 1);
+      let answersLength =1
+      if(questionGroup.IS_MULTIPLE){
+        answersLength = Math.max(...Object.values(answersByQuestion).map((a) => a.length), 1);
+      }
 
 
       for (let i = 0; i < answersLength; i++) {
