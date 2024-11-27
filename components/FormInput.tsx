@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
+import { DateRange } from "react-day-picker";
 
 interface FormInputType {
   type?: string;
@@ -40,6 +41,8 @@ const FormInput: React.FC<FormInputType> = ({
 }) => {
   const [value, setValue] = useState(initialValue);
   const [isEmpty, setIsEmpty] = useState(isRequired && !initialValue);
+
+  const isValidDate = (date: any) => date instanceof Date;
 
   useEffect(() => {
     setValue(initialValue);
@@ -168,7 +171,9 @@ const FormInput: React.FC<FormInputType> = ({
     <PopoverTrigger asChild>
       <Input
         type="text"
-        value={value ? format(value, "dd/MM/yyyy") : ""}
+        value={value &&
+          isValidDate(value)? 
+          format(value, "dd/MM/yyyy") : ""}
         placeholder="Selecione uma data"
         readOnly
         onBlur={handleBlur} // Dispara ao perder o foco
@@ -179,7 +184,7 @@ const FormInput: React.FC<FormInputType> = ({
     <PopoverContent className="p-0">
       <Calendar
         selected={value}
-        onSelect={(date) => {
+        onSelect={(date: DateRange | undefined) => {
           handleChange(date);
           onChange(name, date); // Dispara a alteração para o componente pai
         }}

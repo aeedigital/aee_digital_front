@@ -4,20 +4,64 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuizComponent } from '@components/QuizComponent';
-import { Page } from '@/interfaces/form.interface';
+import { Answer, Page } from '@/interfaces/form.interface';
 
 export default function DynamicPage({ params }: any) {
   const { centroId } = params;
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({}); // Cache para múltiplas respostas por questão
+
+
+  const handleAnswerChange = async (answerId: string | null, newAnswer: Answer) => {
+   
+   
+    setAnswersCache((prev) => {
+
+      console.log("Vai atualizar o cache", answerId, newAnswer)
+      const questionId: string = newAnswer.QUESTION_ID
+
+      const existingAnswers = prev[questionId] || [];
+      let updatedAnswers;
+  
+      // Editar uma resposta existente
+      updatedAnswers = existingAnswers.map((answer) =>
+        answer._id === answerId ? newAnswer : answer
+      );
+
+      console.log("LENGTH", updatedAnswers);
+
+      if(updatedAnswers.length == 0){
+        updatedAnswers = [...existingAnswers, newAnswer];
+      }
+
+  
+      console.log("UpdatedAnswers",updatedAnswers)
+      return { ...prev, [questionId]: updatedAnswers };
+    });
+  
+  };
+  
 
   useEffect(() => {
     async function fetchData() {
-      const formResponse = await fetch(
-        `/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`
-      ).then((res) => res.json());
+      const [formResponse, answers] = await Promise.all([
+        fetch( `/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual` ).then((res) => res.json()),
+        fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res)=>res.json())
+      ])
 
+      let cache: Record<string, any[]> = {}
+      answers.forEach((answer: Answer) => {
+        const questionId = answer.QUESTION_ID;
+        if (!cache[questionId]) {
+          cache[questionId] = []
+        }
+        cache[questionId].push(answer)
+      }
+      );
+
+      setAnswersCache(cache);
       setPages(formResponse[0].PAGES);
       setIsLoading(false);
     }
@@ -58,6 +102,8 @@ export default function DynamicPage({ params }: any) {
                     key={quizIndex}
                     centroId={centroId}
                     quiz={quiz}
+                    initialCache = {answersCache}
+                    onAnswerChange={handleAnswerChange}
                   />
                 ))}
               </div>

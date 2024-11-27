@@ -7,31 +7,26 @@ interface QuestionProps {
   centroId: string;
   questionIndex: number|string;
   answer: Answer 
-  onAnswerChange?: (index: number | string, newAnswer: Answer) => void; // Nova prop
+  onAnswerChange?: (answerId: string | null, newAnswer: Answer) => void; // Nova prop
 }
 
 export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange }: QuestionProps) {
-  const [value, setValue] = useState<any>(answer.ANSWER);
+  const [questionValue, setQuestionValue] = useState<Answer>(answer);
 
   const {_id: questionId} = question
 
   useEffect(() => {
-    setValue(answer.ANSWER);
-  }, [answer.ANSWER]);
+    setQuestionValue(answer);
+  }, [answer]);
 
   // Função para atualizar a resposta da API usando PUT com query parameters
   async function onInputChange(name: string, value: any): Promise<void> {
     try {
+      let response: any;
 
-      console.log("ANSWER", {
-        ANSWER: String(value),
-      })
-
-      let response
-
-      if(answer._id){
+      if(questionValue._id){
         response = await fetch(
-          `http://localhost:5000/answers?questionId=${questionId}&centroId=${centroId}&answerId=${answer._id}`, 
+          `http://localhost:5000/answers?questionId=${questionId}&centroId=${centroId}&answerId=${questionValue._id}`, 
           {
             method: 'PUT',
             headers: {
@@ -41,7 +36,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
               ANSWER: String(value),
             }),
           }
-        );
+        ).then((res:any) => res.json());
       }else{
         response = await fetch(
           `http://localhost:5000/answers`, 
@@ -56,28 +51,21 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
               QUESTION_ID: questionId
             }),
           }
-        );
-      }
-      // Atualiza o estado imediatamente para refletir a mudança no UI
-
-
-
-      // Envia a atualização para a API com os parâmetros na URL
-
-      if (!response.ok) {
-        throw new Error('Erro ao atualizar a resposta na API');
+        ).then((res:any) => res.json());
       }
 
-      console.log('Resposta atualizada com sucesso', response);
+      setQuestionValue( (prevValue) =>{
+        prevValue.ANSWER = value;
 
-      setValue(value);
+        return prevValue
+      });
 
       if (onAnswerChange) {
         const updatedAnswer: Answer = {
           ...answer,
           ANSWER: String(value),
         };
-        onAnswerChange(questionIndex, updatedAnswer);
+        onAnswerChange(response._id, updatedAnswer);
       }
 
     } catch (error) {
@@ -91,7 +79,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
       <FormInput
         type={question.ANSWER_TYPE.toLowerCase()}
         name={`${question._id}-${questionIndex}`}
-        value={value}
+        value={questionValue.ANSWER}
         onChange={onInputChange}
         options={question.PRESET_VALUES}
         isDisabled={false}

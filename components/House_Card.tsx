@@ -32,7 +32,6 @@ interface QuestionAnswer {
 
 const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenador_questions, form }) => {
   const [perguntasFaltantes, setPerguntasFaltantes] = useState<string[]>([]);
-  const [participacao, setParticipacao] = useState<string>('');
   const [situacao, setSituacao] = useState<string>('');
   const [questoes_coordenador, setCoordenadorQuestoes]= useState<any[]>([])
 
@@ -75,7 +74,6 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
 
       setCoordenadorQuestoes(coordenarorquestionsInfo)
 
-      console.log("QUestions", coordenarorquestionsInfo)
     }
 
     fetchInfo()
@@ -129,19 +127,12 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
 
   },[form, centro._id])
 
-  const handleInputChange = (name: string, value: any) => {
-    if (name === 'situacao') {
-      setSituacao(value);
-    } else if (name === 'participacao') {
-      setParticipacao(value);
-    }
-  };
 
   const getBackgroundColor = () => {
     let questions = 0;
     let answered = 0;
 
-    const todasQuestoesCoordenadorPreenchidas = questoes_coordenador.every(
+    questoes_coordenador.every(
       (qa) => {
         questions++
         const hasAnswer = qa.answer?.ANSWER?.trim().length > 0
@@ -174,12 +165,17 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
     router.push(`/summary/${centro._id}`);
   };
 
-  const handleAnswerChange = (index: number | string, updatedAnswer: Answer) => {
-    const updatedQuestoesCoordenador:QuestionAnswer[] = [...questoes_coordenador];
-    updatedQuestoesCoordenador[index] = {
-      ...updatedQuestoesCoordenador[index],
-      answer: updatedAnswer,
-    };
+  const handleAnswerChange = (answerId: string | null, newAnswer: Answer) => {
+    const updatedQuestoesCoordenador:QuestionAnswer[] = questoes_coordenador;
+
+    for (let index = 0; index < updatedQuestoesCoordenador.length; index++) {
+      const questionAnswer = updatedQuestoesCoordenador[index];
+      const { answer} = questionAnswer
+      if(answer._id == answerId){
+        updatedQuestoesCoordenador[index].answer = newAnswer
+      }      
+    }
+  
     setCoordenadorQuestoes(updatedQuestoesCoordenador);
   };
 
@@ -192,7 +188,7 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
         <CardDescription>{centro.NOME_CURTO} {centro.data_avaliacao}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div>Avaliação: <FormInput type="text" isDisabled={true} name="situacao" value={situacao} onChange={handleInputChange} options={avaliacao_question.PRESET_VALUES} /></div>
+        <div>Avaliação: <FormInput type="text" isDisabled={true} name="situacao" value={situacao} options={avaliacao_question.PRESET_VALUES} /></div>
 
         {questoes_coordenador.map((questionAnswered, index) => (
         <div key={index}>

@@ -23,7 +23,7 @@ export interface Page {
 }
 
 export interface Answer {
-  _id?: string;
+  _id: string;
   CENTRO_ID: string;
   QUIZ_ID: string;
   QUESTION_ID: string;

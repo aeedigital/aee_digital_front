@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useMemo } from "react";
+
 import { QuestionComponent } from "./QuestionComponent";
 import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +10,8 @@ import { FiPlus, FiTrash } from "react-icons/fi";
 interface QuestionProps {
   questionGroup: QuestionGroup;
   centroId: string;
+  initialCache: Record<string,Answer[]>;
+  onAnswerChange: (answerId: string | null, newAnswer: Answer) => void; // Função para atualizar respostas
 }
 
 interface QuestionAnswer {
@@ -20,9 +23,28 @@ interface QuestionAnswerGroup {
   questionsAnswered: QuestionAnswer[];
 }
 
-export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProps) {
+export function GroupQuestionComponent({ questionGroup, centroId, initialCache, onAnswerChange }: QuestionProps) {
   const { toast } = useToast();
   const [answerGroups, setAnswerGroups] = useState<QuestionAnswerGroup[]>([]);
+  
+
+  function setGroupCache() {
+    const localCache: Record<string, Answer[]> = {}
+
+    questionGroup.GROUP.forEach(question => {
+      if (initialCache[question._id]) {
+        localCache[question._id] = initialCache[question._id]
+      }
+    });
+
+    return localCache;
+  }
+
+  function updateCachedAnswer(questionId: string, answerId: string, answerValue: string){
+
+  }
+
+
 
   const initializeEmptyGroups = () => {
     const emptyGroups: QuestionAnswerGroup[] = [];
@@ -35,6 +57,7 @@ export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProp
           QUIZ_ID: "",
           QUESTION_ID: question._id,
           ANSWER: "",
+          _id:""
         },
       })),
     };
@@ -63,25 +86,18 @@ export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProp
   useEffect(() => {
     async function fetchAnswers() {
       const tempAnswerGroups: QuestionAnswerGroup[] = [];
-      const answersByQuestion: Record<string, any[]> = {};
 
-      // Simulate fetching answers (replace with real API calls)
-      for (const question of questionGroup.GROUP) {
-        const fetchedAnswers = await fetch(`/api/answers?CENTRO_ID=${centroId}&QUESTION_ID=${question._id}`).then((res) => res.json());
-        answersByQuestion[question._id] = fetchedAnswers;
-      }
-
+      const groupCache = setGroupCache()
 
       let answersLength =1
       if(questionGroup.IS_MULTIPLE){
-        answersLength = Math.max(...Object.values(answersByQuestion).map((a) => a.length), 1);
+        answersLength = Math.max(...Object.values(groupCache).map((a) => a.length), 1);
       }
-
 
       for (let i = 0; i < answersLength; i++) {
         const group: QuestionAnswerGroup = {
           questionsAnswered: questionGroup.GROUP.map((question) => {
-            const answer = answersByQuestion[question._id]?.[i] || {
+            const answer = groupCache[question._id]?.[i] || {
               CENTRO_ID: centroId,
               QUIZ_ID: "",
               QUESTION_ID: question._id,
@@ -99,7 +115,7 @@ export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProp
     // Initialize with empty groups and then fetch answers
     setAnswerGroups(initializeEmptyGroups());
     fetchAnswers();
-  }, [questionGroup, centroId]);
+  }, [questionGroup, centroId, initialCache]);
 
   return (
     <div className="space-y-6">
@@ -113,6 +129,7 @@ export function GroupQuestionComponent({ questionGroup, centroId }: QuestionProp
                 answer={questionAnswered.answer}
                 question={questionAnswered.question}
                 questionIndex={questionIndex}
+                onAnswerChange={onAnswerChange}
               />
             ))}
           </div>
