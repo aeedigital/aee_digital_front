@@ -40,6 +40,7 @@ const FormInput: React.FC<FormInputType> = ({
   answerType,
 }) => {
   const [value, setValue] = useState(initialValue);
+
   const [isEmpty, setIsEmpty] = useState(isRequired && !initialValue);
 
   const isValidDate = (date: any) => date instanceof Date;
@@ -54,60 +55,52 @@ const FormInput: React.FC<FormInputType> = ({
   };
 
   const handleChange = (newValue: any) => {
+    console.log("HANDLE CHANCE", name, answerType)
     setValue(newValue); // Apenas atualiza o estado local
     setIsEmpty(isRequired && !newValue);
+
+    const inputType = getInputType();
+    if (["checkbox", "radio", "switch", "select", "date", "time"].includes(inputType || "")) {
+      // Para esses tipos, chama diretamente a API ao mudar
+      console.log("ENTROU")
+      onChange(name, newValue);
+    }
   };
 
   const getInputType = () => {
-    let returntype;
-
     switch (answerType) {
       case "Option":
-        returntype = "select";
-        break;
+        return "select";
       case "String":
-        returntype = "text";
-        break;
+        return "text";
       case "LongText":
-        returntype = "textarea";
-        break;
+        return "textarea";
       case "Boolean":
-        returntype = "checkbox";
-        break;
+        return "checkbox";
       case "Radio":
-        returntype = "radio";
-        break;
+        return "radio";
       case "Switch":
-        returntype = "switch";
-        break;
+        return "switch";
       case "Date":
-        returntype = "date";
-        break;
+        return "date";
       case "Time":
-        returntype = "time";
-        break;
+        return "time";
       default:
-        returntype = type || "text";
-        break;
+        return type || "text";
     }
-
-    return returntype;
   };
 
   const inputType = getInputType();
-  const inputStyles = isEmpty ? { borderColor: 'red', borderWidth: '1px' } : {};
+  const inputStyles = isEmpty ? { borderColor: "red", borderWidth: "1px" } : {};
 
   return (
     <div className="space-y-2">
       {inputType === "select" && (
-         <div
-         onBlur={() => {
-           onChange(name, value); // Dispara a alteração ao perder o foco
-         }}
-       >
-        <Select value={value} onValueChange={(newValue) => {
-        handleChange(newValue);
-      }} disabled={isDisabled}>
+        <Select
+          value={value}
+          onValueChange={(newValue) => handleChange(newValue)}
+          disabled={isDisabled}
+        >
           <SelectTrigger style={inputStyles}>
             <SelectValue placeholder="Selecione uma opção" />
           </SelectTrigger>
@@ -119,14 +112,13 @@ const FormInput: React.FC<FormInputType> = ({
             ))}
           </SelectContent>
         </Select>
-        </div>
       )}
 
       {inputType === "textarea" && (
         <Textarea
           value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={handleBlur} // Dispara ao perder o foco
+          onChange={(e) => setValue(e.target.value)} // Atualiza localmente ao digitar
+          onBlur={handleBlur} // Chama a API ao perder o foco
           placeholder="Digite algo..."
           disabled={isDisabled}
           style={inputStyles}
@@ -135,9 +127,8 @@ const FormInput: React.FC<FormInputType> = ({
 
       {inputType === "checkbox" && (
         <Checkbox
-          checked={value}
-          onCheckedChange={(checked) => handleChange(checked)}
-          onBlur={handleBlur} // Chama ao perder o foco
+          checked={value === true || value === "true"} // Suporte a string "true"
+          onCheckedChange={(checked) => handleChange(checked)} // Chama direto a API ao mudar
           disabled={isDisabled}
         />
       )}
@@ -146,7 +137,6 @@ const FormInput: React.FC<FormInputType> = ({
         <RadioGroup
           value={value}
           onValueChange={(val) => handleChange(val)}
-          onBlur={handleBlur} // Chama ao perder o foco
           disabled={isDisabled}
         >
           {options.map((option) => (
@@ -159,9 +149,8 @@ const FormInput: React.FC<FormInputType> = ({
 
       {inputType === "switch" && (
         <Switch
-          checked={value}
-          onCheckedChange={(checked) => handleChange(checked)}
-          onBlur={handleBlur} // Chama ao perder o foco
+          checked={value === true || value === "true"} // Suporte a string "true"
+          onCheckedChange={(checked) => handleChange(checked)} // Chama direto a API ao mudar
           disabled={isDisabled}
         />
       )}
@@ -171,23 +160,23 @@ const FormInput: React.FC<FormInputType> = ({
     <PopoverTrigger asChild>
       <Input
         type="text"
-        value={value &&
-          isValidDate(value)? 
-          format(value, "dd/MM/yyyy") : ""}
+        value={value && isValidDate(new Date(value)) ? format(new Date(value), "dd/MM/yyyy") : ""}
         placeholder="Selecione uma data"
         readOnly
-        onBlur={handleBlur} // Dispara ao perder o foco
         disabled={isDisabled}
         style={inputStyles}
       />
     </PopoverTrigger>
     <PopoverContent className="p-0">
       <Calendar
-        selected={value}
-        onSelect={(date: DateRange | undefined) => {
-          handleChange(date);
-          onChange(name, date); // Dispara a alteração para o componente pai
+        selected={isValidDate(new Date(value)) ? new Date(value) : undefined}
+        onSelect={(date) => {
+          if (date) {
+            handleChange(date); // Atualiza o estado local com a data selecionada
+            onChange(name, date); // Notifica o componente pai
+          }
         }}
+        mode="single" // Permite selecionar apenas uma data
         disabled={isDisabled}
       />
     </PopoverContent>
@@ -200,7 +189,6 @@ const FormInput: React.FC<FormInputType> = ({
           type="time"
           value={value}
           onChange={(e) => handleChange(e.target.value)}
-          onBlur={handleBlur} // Dispara ao perder o foco
           placeholder="Selecione uma hora"
           disabled={isDisabled}
           style={inputStyles}
@@ -211,8 +199,8 @@ const FormInput: React.FC<FormInputType> = ({
         <Input
           type="text"
           value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={handleBlur} // Dispara ao perder o foco
+          onChange={(e) => setValue(e.target.value)} // Atualiza localmente ao digitar
+          onBlur={handleBlur} // Chama a API ao perder o foco
           placeholder="Digite algo"
           disabled={isDisabled}
           style={inputStyles}

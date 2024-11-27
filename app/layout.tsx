@@ -39,7 +39,7 @@ export default function RootLayout({
               <DropdownMenuTrigger asChild>
                 <button className="outline-none">
                   <Avatar className="w-10 h-10 cursor-pointer">
-                    <AvatarImage src="/path-to-user-image.jpg" alt="User Avatar" />
+                    {/* <AvatarImage src="/path-to-user-image.jpg" alt="User Avatar" /> */}
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                 </button>
