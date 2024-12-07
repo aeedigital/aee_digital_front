@@ -14,41 +14,53 @@ export default function DynamicPage({ params }: any) {
   const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({}); // Cache para múltiplas respostas por questão
 
 
-  const handleAnswerChange = async (answerId: string | null, newAnswer: Answer) => {
-   
-   
+  const handleAnswerChange = async (
+    questionId: string,
+    answerId: string | null,
+    newAnswer: Answer | null
+  ) => {
     setAnswersCache((prev) => {
+      console.log("Vai atualizar o cache", questionId, answerId, newAnswer);
 
-      console.log("Vai atualizar o cache", answerId, newAnswer)
-      const questionId: string = newAnswer.QUESTION_ID
+      if (!questionId) {
+        console.warn("Nenhum questionId fornecido.");
+        return prev;
+      }
 
       const existingAnswers = prev[questionId] || [];
       let updatedAnswers;
-  
-      // Editar uma resposta existente
-      updatedAnswers = existingAnswers.map((answer) =>
-        answer._id === answerId ? newAnswer : answer
-      );
 
-      console.log("LENGTH", updatedAnswers);
-
-      if(updatedAnswers.length == 0){
+      if (newAnswer === null && answerId !== null) {
+        // Remover uma resposta específica
+        updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
+        console.log("Resposta removida", updatedAnswers);
+      } else if (newAnswer && answerId) {
+        // Atualizar uma resposta existente
+        updatedAnswers = existingAnswers.map((answer) =>
+          answer._id === answerId ? newAnswer : answer
+        );
+        console.log("Resposta atualizada", updatedAnswers);
+      } else if (newAnswer && !answerId) {
+        // Adicionar uma nova resposta
         updatedAnswers = [...existingAnswers, newAnswer];
+        console.log("Nova resposta adicionada", updatedAnswers);
+      } else {
+        // Caso inválido
+        console.warn("Nenhuma operação realizada. Verifique os parâmetros.");
+        return prev;
       }
 
-  
-      console.log("UpdatedAnswers",updatedAnswers)
       return { ...prev, [questionId]: updatedAnswers };
     });
-  
   };
-  
+
+
 
   useEffect(() => {
     async function fetchData() {
       const [formResponse, answers] = await Promise.all([
-        fetch( `/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual` ).then((res) => res.json()),
-        fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res)=>res.json())
+        fetch(`/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual`).then((res) => res.json()),
+        fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) => res.json())
       ])
 
       let cache: Record<string, any[]> = {}
@@ -102,7 +114,7 @@ export default function DynamicPage({ params }: any) {
                     key={quizIndex}
                     centroId={centroId}
                     quiz={quiz}
-                    initialCache = {answersCache}
+                    initialCache={answersCache}
                     onAnswerChange={handleAnswerChange}
                   />
                 ))}

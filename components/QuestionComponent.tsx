@@ -7,7 +7,7 @@ interface QuestionProps {
   centroId: string;
   questionIndex: number|string;
   answer: Answer 
-  onAnswerChange?: (answerId: string | null, newAnswer: Answer) => void; // Nova prop
+  onAnswerChange?: (questionId:string, answerId: string | null, newAnswer: Answer) => void; // Nova prop
 }
 
 export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange }: QuestionProps) {
@@ -23,6 +23,8 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
   async function onInputChange(name: string, value: any): Promise<void> {
     try {
       let response: any;
+
+      console.log("Answer", answer)
 
       if(questionValue._id){
         response = await fetch(
@@ -65,7 +67,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
           ...answer,
           ANSWER: String(value),
         };
-        onAnswerChange(response._id, updatedAnswer);
+        onAnswerChange(question._id, response._id, updatedAnswer);
       }
 
     } catch (error) {

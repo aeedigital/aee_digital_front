@@ -5,7 +5,7 @@ interface QuizProps {
   quiz: Quiz;
   centroId: string;
   initialCache: Record<string, Answer[]>;
-  onAnswerChange: (answerId: string | null, newAnswer: Answer) => void; // Função para atualizar respostas
+  onAnswerChange: (questionId: string, answerId: string | null, newAnswer: Answer | null) => void; // Função para atualizar respostas
 }
 
 export function QuizComponent({ quiz, centroId, initialCache, onAnswerChange }: QuizProps) {

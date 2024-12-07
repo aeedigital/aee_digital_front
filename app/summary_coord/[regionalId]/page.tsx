@@ -13,7 +13,6 @@ export default function MainPage({params}:any) {
 
   const [centros, setCentros] = useState([]);
   const [coordenador, setCoordenador] = useState("");
-  const [avaliacaoResponses, setAvaliacaoResponses] = useState({});
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
   const hasLoadedRef = useRef(false); // Use useRef instead of useState
@@ -32,10 +31,6 @@ export default function MainPage({params}:any) {
   PRESET_VALUES: []
   }])
   const [formulario, setFormulario] = useState({})
-
-
-  function HandleInput(a:any){
-  }
 
   function findQuestionByCategory(form: any, category: string) {
 

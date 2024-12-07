@@ -7,6 +7,7 @@ export default function Header() {
         <div className="cab-logo">
           <a href="//www.alianca.org.br" target="_blank" rel="noopener noreferrer">
           <Image 
+            priority={false} 
             src="/logo-aee2-completo-vetor.png" alt="Logo" />
           </a>
           <div className="cab-menu">

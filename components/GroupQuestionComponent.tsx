@@ -11,7 +11,7 @@ interface QuestionProps {
   questionGroup: QuestionGroup;
   centroId: string;
   initialCache: Record<string,Answer[]>;
-  onAnswerChange: (answerId: string | null, newAnswer: Answer) => void; // Função para atualizar respostas
+  onAnswerChange: (questionId:string, answerId: string | null, newAnswer: Answer | null) => void; // Função para atualizar respostas
 }
 
 interface QuestionAnswer {
@@ -40,39 +40,96 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     return localCache;
   }
 
-  function updateCachedAnswer(questionId: string, answerId: string, answerValue: string){
+  const removeAnswer = async(questionId:string, answerId:string): Promise<any> =>{
+    console.log("Answer to Remove", answerId);
 
+    const answerRemoved = await fetch(
+      `http://localhost:5000/answers/${answerId}`, 
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    ).then((res:any) => res.json());
+
+    onAnswerChange(questionId, answerId, null)
+
+    console.log("Answer Remmoved", answerRemoved)
+
+    return answerRemoved;
   }
 
+  const createAnswer = async (questionId: string, value: string): Promise<any>=>{
 
+    console.log("Answer to Add", questionId, value)
+    const answerCreated = await fetch(
+      `http://localhost:5000/answers`, 
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ANSWER: String(value),
+          CENTRO_ID: centroId,
+          QUESTION_ID: questionId
+        }),
+      }
+    ).then((res:any) => res.json());
 
-  const initializeEmptyGroups = () => {
+    onAnswerChange(questionId, null, answerCreated)
+
+    console.log("Answer Added", answerCreated)
+
+    return answerCreated;
+  }
+
+  const initializeEmptyGroups = (shouldCreateQuestions:boolean) => {
     const emptyGroups: QuestionAnswerGroup[] = [];
     // Create a single empty group initially
     const emptyGroup: QuestionAnswerGroup = {
-      questionsAnswered: questionGroup.GROUP.map((question) => ({
-        question,
-        answer: {
-          CENTRO_ID: centroId,
-          QUIZ_ID: "",
-          QUESTION_ID: question._id,
-          ANSWER: "",
-          _id:""
-        },
-      })),
+      questionsAnswered: questionGroup.GROUP.map((question) => {
+
+        const questionAnswered = {
+          question,
+          answer: {
+            CENTRO_ID: centroId,
+            QUIZ_ID: "",
+            QUESTION_ID: question._id,
+            ANSWER: "",
+            _id:""
+          }
+        }
+        if(shouldCreateQuestions){
+          createAnswer(question._id, " ")
+        }
+
+        return questionAnswered;
+      }),
     };
     emptyGroups.push(emptyGroup);
 
     return emptyGroups;
   };
 
+
   const handleAddGroup = () => {
-    const newEmptyGroup = initializeEmptyGroups()[0]; // Create one empty group
+    const newEmptyGroup = initializeEmptyGroups(true)[0]; // Create one empty group
     setAnswerGroups((prevGroups) => [...prevGroups, newEmptyGroup]);
   };
 
   const handleRemoveGroup = (index: number) => {
     if (answerGroups.length > 1) {
+      const answerGroupToRemove = answerGroups[index];
+
+      for (let index = 0; index < answerGroupToRemove.questionsAnswered.length; index++) {
+        const questionAnswered = answerGroupToRemove.questionsAnswered[index];
+        const {question, answer} = questionAnswered;
+
+        removeAnswer(question._id, answer._id)
+      }
+
       setAnswerGroups((prevGroups) => prevGroups.filter((_, i) => i !== index));
     } else {
       toast({
@@ -113,7 +170,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     }
 
     // Initialize with empty groups and then fetch answers
-    setAnswerGroups(initializeEmptyGroups());
+    setAnswerGroups(initializeEmptyGroups(false));
     fetchAnswers();
   }, [questionGroup, centroId, initialCache]);
 
