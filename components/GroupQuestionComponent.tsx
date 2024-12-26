@@ -44,7 +44,8 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     console.log("Answer to Remove", answerId);
 
     const answerRemoved = await fetch(
-      `http://localhost:5000/answers/${answerId}`, 
+
+      `${process.env.NEXT_PUBLIC_API_URL}/answers/${answerId}`,
       {
         method: 'DELETE',
         headers: {
@@ -64,7 +65,8 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
 
     console.log("Answer to Add", questionId, value)
     const answerCreated = await fetch(
-      `http://localhost:5000/answers`, 
+
+      `${process.env.NEXT_PUBLIC_API_URL}/answers`,
       {
         method: 'POST',
         headers: {

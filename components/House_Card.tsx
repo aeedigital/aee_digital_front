@@ -165,7 +165,7 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
     router.push(`/summary/${centro._id}`);
   };
 
-  const handleAnswerChange = (answerId: string | null, newAnswer: Answer) => {
+  const handleAnswerChange = (questionId:string,answerId: string | null, newAnswer: Answer) => {
     const updatedQuestoesCoordenador:QuestionAnswer[] = questoes_coordenador;
 
     for (let index = 0; index < updatedQuestoesCoordenador.length; index++) {
@@ -179,6 +179,10 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
     setCoordenadorQuestoes(updatedQuestoesCoordenador);
   };
 
+  const onInputChange = () =>{
+
+  }
+
   return (
     <Card
     className={`m-4 w-64 border border-gray-300  rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
@@ -188,7 +192,14 @@ const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenad
         <CardDescription>{centro.NOME_CURTO} {centro.data_avaliacao}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div>Avaliação: <FormInput type="text" isDisabled={true} name="situacao" value={situacao} options={avaliacao_question.PRESET_VALUES} /></div>
+        <div>Avaliação: <FormInput 
+          type="text" 
+          isDisabled={true} 
+          name="situacao" 
+          value={situacao}
+          onChange={onInputChange}
+          options={avaliacao_question.PRESET_VALUES} />
+        </div>
 
         {questoes_coordenador.map((questionAnswered, index) => (
         <div key={index}>

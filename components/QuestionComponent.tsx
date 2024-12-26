@@ -27,7 +27,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
 
       if (questionValue._id) {
         response = await fetch(
-          `http://localhost:5000/answers?questionId=${questionId}&centroId=${centroId}&answerId=${questionValue._id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/answers?questionId=${questionId}&centroId=${centroId}&answerId=${questionValue._id}`,
           {
             method: 'PUT',
             headers: {
@@ -40,7 +40,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
         ).then((res: any) => res.json());
       } else {
         response = await fetch(
-          `http://localhost:5000/answers`,
+          `${process.env.NEXT_PUBLIC_API_URL}/answers`,
           {
             method: 'POST',
             headers: {

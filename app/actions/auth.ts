@@ -7,8 +7,12 @@ export type Authorization = {
 
 export async function Auth(user: string, pass: string): Promise<Authorization>{
     
-    const users: any[] = await fetch(`http://localhost:3000/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
+    let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}`;
+
+    const users: any[] = await fetch(`${apiUrl}/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
    
+console.log("AUTH", users)
+
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
 

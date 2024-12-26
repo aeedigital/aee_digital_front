@@ -4,23 +4,45 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 
-import { Auth } from '../actions/auth';
 import { getInitialPage } from '../actions/permitions';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {UserRole} from '../actions/permitions'
+
+type Authorization = {
+  role: UserRole;
+  scope?: string;
+}
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  async function Auth(user: string, pass: string): Promise<Authorization>{
+    
+    const users: any[] = await fetch(`/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
+   
+console.log("users", users)
+
+    const userInfo = users[0];
+    // const {groups: [role], scope_id: scope} = userInfo
+
+    let role = userInfo?.groups[0];
+    let scope
+    
+    if(userInfo?.scope_id != "*")
+    {
+        scope = userInfo?.scope_id
+    }
+    return {
+        scope,
+        role
+    }
+  }
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -49,7 +71,6 @@ export default function LoginPage() {
     }
   };
 
-  if (!isMounted) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -60,7 +81,7 @@ export default function LoginPage() {
           <h5 className="text-gray-700 leading-relaxed text-base">
             Seja bem-vindo à página de cadastro das casas espíritas filiadas à Aliança Espírita Evangélica!<br /><br />
             Com o usuário e senha de sua Casa Espírita recebida do seu coordenador regional, você poderá acessar a página do cadastro e atualizar os dados!<br /><br />
-            Ficou com dúvidas? Entre em contato com o coordenador de sua regional, ou fale com a Secretaria da Aliança (<a href="mailto:alianca@alianca.org.br" className="text-blue-500 hover:underline">alianca@alianca.org.br</a> // WhatsApp <b>11 3105-5894</b>).
+            Ficou com dúvidas? Entre em contato com o coordenador de sua regional, ou fale com a Secretaria da Aliança (<a href="mailto:alianca@alianca.org.br" className="text-blue-500 hover:underline">alianca@alianca.org.br</a> WhatsApp <b>11 3105-5894</b>).
           </h5>
         </div>
 

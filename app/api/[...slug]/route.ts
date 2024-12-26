@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   const path = slug ? slug.join('/') : '';
 
   // Construindo a URL dinâmica para a chamada externa
-  let apiUrl = `http://localhost:5000/${path}`;
+  let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/${path}`;
 
   // Adiciona os parâmetros de consulta à URL se houver algum
   if (searchParams.toString()) {
@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     return NextResponse.json(data);
   } catch (error:any) {
 
+    console.log("error", error)
     // Capturando e retornando erros caso a requisição falhe
     return NextResponse.json({ error: 'Error fetching from external API', details: error?.message }, { status: 500 });
   }

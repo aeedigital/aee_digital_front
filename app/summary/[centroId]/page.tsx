@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
+import { CompletionNotification } from "@components/CompletionNotification";
 import { Answer, Page } from "@/interfaces/form.interface";
 
 export default function DynamicPage({ params }: any) {
@@ -13,9 +13,9 @@ export default function DynamicPage({ params }: any) {
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({});
-  const [invalidCounts, setInvalidCounts] = useState<Record<string, number>>({});
-  const [totalInvalid, setTotalInvalid] = useState<number>(0);
-  const [formId, setFormId] = useState<string>()
+  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
+  const [formId, setFormId] = useState<string>("");
+  const [showCompletionNotification, setShowCompletionNotification] = useState(false);
 
   const handleAnswerChange = async (
     questionId: string,
@@ -63,40 +63,26 @@ export default function DynamicPage({ params }: any) {
         cache[questionId].push(answer);
       });
 
-      const firstFormResponse = formResponse[0]
-
+      const firstFormResponse = formResponse[0];
       setAnswersCache(cache);
       setPages(firstFormResponse.PAGES);
-
-console.log("FORM", firstFormResponse)
-
       setFormId(firstFormResponse._id);
       setIsLoading(false);
     }
     fetchData();
   }, [centroId]);
 
-  useEffect(() => {
-    const invalidCountsPerPage: Record<string, number> = {};
-    let totalInvalidCount = 0;
+  const handlePreviousPage = () => {
+    setCurrentPageIndex((prev) => Math.max(prev - 1, 0));
+  };
 
-    pages.forEach((page) => {
-      const flattenedQuestions = page.QUIZES.flatMap((quiz) =>
-        quiz.QUESTIONS.flatMap((q) => q.GROUP || [])
-      );
+  const handleNextPage = () => {
+    setCurrentPageIndex((prev) => Math.min(prev + 1, pages.length));
+  };
 
-      const invalid = flattenedQuestions.filter((q) => {
-        const answers = answersCache[q._id] || [];
-        return q.IS_REQUIRED && (answers.length === 0 || answers.some((a) => !a.ANSWER || a.ANSWER.trim() === ""));
-      });
-
-      invalidCountsPerPage[page.PAGE_NAME] = invalid.length;
-      totalInvalidCount += invalid.length;
-    });
-
-    setInvalidCounts(invalidCountsPerPage);
-    setTotalInvalid(totalInvalidCount);
-  }, [pages, answersCache]);
+  const handleFormCompletion = () => {
+    setShowCompletionNotification(true);
+  };
 
   return (
     <div className="w-full p-6">
@@ -114,22 +100,11 @@ console.log("FORM", firstFormResponse)
           </div>
         </div>
       ) : (
-        <Tabs defaultValue={pages[0]?.PAGE_NAME || ""}>
-          <TabsList className="flex">
-            {pages.map((page) => (
-              <TabsTrigger key={page.PAGE_NAME} value={page.PAGE_NAME}>
-                {page.PAGE_NAME} ({invalidCounts[page.PAGE_NAME] || 0})
-              </TabsTrigger>
-            ))}
-            <TabsTrigger value="validation">
-              Validação ({totalInvalid})
-            </TabsTrigger>
-          </TabsList>
-
-          {pages.map((page) => (
-            <TabsContent key={page.PAGE_NAME} value={page.PAGE_NAME}>
+        <div>
+          {pages.length > 0 && currentPageIndex < pages.length && (
+            <div>
               <div className="space-y-4">
-                {page.QUIZES.map((quiz, quizIndex) => (
+                {pages[currentPageIndex].QUIZES.map((quiz, quizIndex) => (
                   <QuizComponent
                     key={quizIndex}
                     centroId={centroId}
@@ -139,18 +114,60 @@ console.log("FORM", firstFormResponse)
                   />
                 ))}
               </div>
-            </TabsContent>
-          ))}
 
-          <TabsContent value="validation">
-            <ValidationTab 
-              questions={pages.flatMap((page) => page.QUIZES.flatMap((quiz) => quiz.QUESTIONS))} 
-              answersCache={answersCache} 
+              <div className="flex justify-between items-center mt-6">
+                <button
+                  disabled={currentPageIndex === 0}
+                  onClick={handlePreviousPage}
+                  className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+
+                <div className="flex space-x-2">
+                  {pages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPageIndex(index)}
+                      className={`px-4 py-2 rounded ${
+                        currentPageIndex === index ? "bg-blue-500 text-white" : "bg-gray-300"
+                      } hover:bg-blue-400`}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  disabled={currentPageIndex === pages.length}
+                  onClick={handleNextPage}
+                  className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+                >
+                  Próximo
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentPageIndex === pages.length && (
+            <ValidationTab
+              questions={pages.flatMap((page) => page.QUIZES.flatMap((quiz) => quiz.QUESTIONS))}
+              answersCache={answersCache}
               formId={formId}
               centroId={centroId}
+              onPrevious={handlePreviousPage}
+              onComplete={handleFormCompletion}
             />
-          </TabsContent>
-        </Tabs>
+          )}
+
+          {showCompletionNotification && (
+            <CompletionNotification
+              onSendEmail={() => {
+                console.log("Resumo enviado por e-mail!");
+              }}
+            />
+          )}
+        </div>
       )}
     </div>
   );
