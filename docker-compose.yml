@@ -1,0 +1,19 @@
+services:
+  nextjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://aee_digital_api:5000"
+
+    ports:
+      - "3000:3000"
+    restart: always
+    networks:
+      - aee_digital_backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://aee_digital_api:5000
+
+networks:
+  aee_digital_backend:
+    external: true
