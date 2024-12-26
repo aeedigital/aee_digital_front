@@ -8,9 +8,6 @@ services:
 
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
     restart: always
     networks:
       - aee_digital_backend
