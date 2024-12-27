@@ -13,6 +13,8 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   // Construindo a URL dinâmica para a chamada externa
   let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/${path}`;
 
+  console.log("apiUrl", apiUrl);
+
   // Adiciona os parâmetros de consulta à URL se houver algum
   if (searchParams.toString()) {
     apiUrl += `?${searchParams.toString()}`;
@@ -30,11 +32,13 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     // Obtendo os dados da resposta
     const data = await response.json();
 
+    console.log("Data", data);
+
     // Retornando a resposta da API externa
     return NextResponse.json(data);
   } catch (error:any) {
 
-    console.log("error", error)
+    console.log("Error", error)
     // Capturando e retornando erros caso a requisição falhe
     return NextResponse.json({ error: 'Error fetching from external API', details: error?.message }, { status: 500 });
   }
