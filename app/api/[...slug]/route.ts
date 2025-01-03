@@ -1,45 +1,114 @@
-import Error from 'next/error';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Rota GET genérica que faz uma chamada para uma API externa
-export async function GET(req: NextRequest, { params }: { params: { slug: string[] } }) {
-  // Capturando os parâmetros de consulta
+// Função auxiliar para construir a URL externa
+function buildApiUrl(req: NextRequest, slug: string[]): string {
   const { searchParams } = new URL(req.url);
-
-  // Capturando os segmentos dinâmicos da URL (slug)
-  const { slug } = params;
   const path = slug ? slug.join('/') : '';
 
-  // Construindo a URL dinâmica para a chamada externa
   let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/${path}`;
-
-  console.log("apiUrl", apiUrl);
-
-  // Adiciona os parâmetros de consulta à URL se houver algum
   if (searchParams.toString()) {
     apiUrl += `?${searchParams.toString()}`;
   }
+  return apiUrl;
+}
+
+/**
+ * GET: recupera dados da API externa
+ */
+export async function GET(req: NextRequest, { params }: { params: { slug: string[] } }) {
+  const apiUrl = buildApiUrl(req, params.slug);
 
   try {
-    // Fazendo a chamada à API externa com múltiplos parâmetros de consulta
     const response = await fetch(apiUrl);
 
-    // Verificando se a chamada foi bem-sucedida
     if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to fetch from the external API' }, { status: response.status });
+      return NextResponse.json(
+        { error: 'Failed to fetch from the external API' },
+        { status: response.status }
+      );
     }
 
-    // Obtendo os dados da resposta
     const data = await response.json();
-
-    console.log("Data", data);
-
-    // Retornando a resposta da API externa
     return NextResponse.json(data);
-  } catch (error:any) {
+  } catch (error: any) {
+    console.error("Error (GET):", error);
+    return NextResponse.json(
+      { error: 'Error fetching from external API', details: error?.message },
+      { status: 500 }
+    );
+  }
+}
 
-    console.log("Error", error)
-    // Capturando e retornando erros caso a requisição falhe
-    return NextResponse.json({ error: 'Error fetching from external API', details: error?.message }, { status: 500 });
+/**
+ * POST: envia dados para a API externa
+ */
+export async function POST(req: NextRequest, { params }: { params: { slug: string[] } }) {
+  const apiUrl = buildApiUrl(req, params.slug);
+
+  try {
+    // Extrair o body da requisição (caso seja JSON)
+    const body = await req.json();
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        // Ajuste conforme o tipo de dados que você estiver enviando
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to POST to the external API' },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error("Error (POST):", error);
+    return NextResponse.json(
+      { error: 'Error posting to external API', details: error?.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT: atualiza dados na API externa
+ */
+export async function PUT(req: NextRequest, { params }: { params: { slug: string[] } }) {
+  const apiUrl = buildApiUrl(req, params.slug);
+
+  try {
+    // Extrair o body da requisição (caso seja JSON)
+    const body = await req.json();
+
+    const response = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        // Ajuste conforme o tipo de dados que você estiver enviando
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: 'Failed to PUT to the external API' },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error("Error (PUT):", error);
+    return NextResponse.json(
+      { error: 'Error putting to external API', details: error?.message },
+      { status: 500 }
+    );
   }
 }

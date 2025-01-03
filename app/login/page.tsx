@@ -26,8 +26,6 @@ export default function LoginPage() {
     
     const users: any[] = await fetch(`/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
    
-console.log("users", users)
-
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
 

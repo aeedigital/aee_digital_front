@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 export function ValidationTab({
@@ -44,7 +46,7 @@ export function ValidationTab({
         QUESTIONS: allAnswers,
       };
 
-      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/summaries`, {
+      const response: Response = await fetch(`/api/summaries`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

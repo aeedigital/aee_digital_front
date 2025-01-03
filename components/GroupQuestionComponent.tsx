@@ -41,7 +41,6 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
   }
 
   const removeAnswer = async(questionId:string, answerId:string): Promise<any> =>{
-    console.log("Answer to Remove", answerId);
 
     const answerRemoved = await fetch(
 
@@ -56,14 +55,10 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
 
     onAnswerChange(questionId, answerId, null)
 
-    console.log("Answer Remmoved", answerRemoved)
-
     return answerRemoved;
   }
 
   const createAnswer = async (questionId: string, value: string): Promise<any>=>{
-
-    console.log("Answer to Add", questionId, value)
     const answerCreated = await fetch(
 
       `${process.env.NEXT_PUBLIC_API_URL}/answers`,
@@ -81,8 +76,6 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     ).then((res:any) => res.json());
 
     onAnswerChange(questionId, null, answerCreated)
-
-    console.log("Answer Added", answerCreated)
 
     return answerCreated;
   }

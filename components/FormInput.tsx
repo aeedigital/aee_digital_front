@@ -55,14 +55,12 @@ const FormInput: React.FC<FormInputType> = ({
   };
 
   const handleChange = (newValue: any) => {
-    console.log("HANDLE CHANCE", name, answerType)
     setValue(newValue); // Apenas atualiza o estado local
     setIsEmpty(isRequired && !newValue);
 
     const inputType = getInputType();
     if (["checkbox", "radio", "switch", "select", "date", "time"].includes(inputType || "")) {
       // Para esses tipos, chama diretamente a API ao mudar
-      console.log("ENTROU")
       onChange(name, newValue);
     }
   };
