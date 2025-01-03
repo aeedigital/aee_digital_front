@@ -11,8 +11,6 @@ export async function Auth(user: string, pass: string): Promise<Authorization>{
 
     const users: any[] = await fetch(`${apiUrl}/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
    
-console.log("AUTH", users)
-
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
 

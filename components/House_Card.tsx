@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-import {Quiz, Question, Answer} from '@/interfaces/form.interface'
+import { Quiz, Question, Answer } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
-
 
 import {
   Card,
@@ -12,10 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+
 import FormInput from './FormInput';
 import { Centro } from '@/interfaces/centro.interface';
 import { QuestionComponent } from './QuestionComponent';
-
 
 interface CardProps {
   centro: Centro;
@@ -27,197 +26,216 @@ interface CardProps {
 
 interface QuestionAnswer {
   question: Question;
-  answer: Answer;
+  answer?: Answer;
 }
 
-const House_Card: React.FC<CardProps> = ({ centro, avaliacao_question, coordenador_questions, form }) => {
-  const [perguntasFaltantes, setPerguntasFaltantes] = useState<string[]>([]);
-  const [situacao, setSituacao] = useState<string>('');
-  const [questoes_coordenador, setCoordenadorQuestoes]= useState<any[]>([])
-
+const House_Card: React.FC<CardProps> = ({ 
+  centro, 
+  avaliacao_question, 
+  coordenador_questions, 
+  form 
+}) => {
   const router = useRouter();
 
-  async function getQuestionAnswer(questionId:string, centroId:string){
-    const res = await fetch(`/api/answers?QUESTION_ID=${questionId}&CENTRO_ID=${centroId}`);
-    const answers = await res.json();
-    const answer = answers[0];
+  // Estado que armazena TODAS as respostas do centro
+  const [allAnswers, setAllAnswers] = useState<Answer[]>([]);
 
-    return answer;
-  }
+  // Situação obtida pela question de avaliação
+  const [situacao, setSituacao] = useState<string>('');
 
+  // Armazena o par (question, answer) para as questões do coordenador
+  const [questoesCoordenador, setQuestoesCoordenador] = useState<QuestionAnswer[]>([]);
+
+  // Lista de perguntas obrigatórias não respondidas
+  const [perguntasFaltantes, setPerguntasFaltantes] = useState<string[]>([]);
+
+  /**
+   * 1. Faz apenas UMA requisição para buscar todas as respostas do centro
+   */
   useEffect(() => {
-    async function fetchCentrosCount() {
-      const _id = avaliacao_question._id;
-      
-      const answer = await getQuestionAnswer(_id, centro._id)
-      setSituacao(answer?.ANSWER || '');
-    }
-
-    fetchCentrosCount();
-  }, [avaliacao_question._id, centro._id]);
-
-  useEffect(()=>{
-    async function fetchInfo(){
-      const coordenarorquestionsInfo:QuestionAnswer[] = []
-  
-      for (let index = 0; index < coordenador_questions.length; index++) {
-        const question = coordenador_questions[index];
-        const answer = await getQuestionAnswer(question._id, centro._id)
-
-        const questionAnswered:QuestionAnswer = {
-          question,
-          answer
-        }
-
-        coordenarorquestionsInfo.push(questionAnswered)
+    async function fetchAllAnswers() {
+      try {
+        const res = await fetch(`/api/answers?CENTRO_ID=${centro._id}`);
+        const data = await res.json();
+        setAllAnswers(data);
+      } catch (error) {
+        console.error('Erro ao buscar as respostas', error);
       }
-
-      setCoordenadorQuestoes(coordenarorquestionsInfo)
-
     }
 
-    fetchInfo()
+    if (centro?._id) {
+      fetchAllAnswers();
+    }
+  }, [centro?._id]);
 
-  },[centro._id, coordenador_questions])
+  /**
+   * 2. Assim que tivermos todas as respostas (`allAnswers`), 
+   *    definimos a situação (campo `situacao`) e populamos as 
+   *    questões do coordenador.
+   */
+  useEffect(() => {
+    if (!allAnswers || allAnswers.length === 0) return;
 
-  
+    // A) Define a situacao
+    const answerAvaliacao = allAnswers.find(
+      (ans) => ans.QUESTION_ID === avaliacao_question._id
+    );
+    setSituacao(answerAvaliacao?.ANSWER || '');
 
-  useEffect(()=>{
-    async function getRequiredQuestion(){
+    // B) Preenche questoesCoordenador
+    const coordenadorQAs = coordenador_questions.map((question) => {
+      const answer = allAnswers.find(
+        (ans) => ans.QUESTION_ID === question._id
+      );
+      return { question, answer };
+    });
+    setQuestoesCoordenador(coordenadorQAs);
+  }, [allAnswers, avaliacao_question, coordenador_questions]);
 
-      async function getRequiredQuestionsNotAnswered(){
-        const responses = await fetch(`/api/answers?CENTRO_ID=${centro._id}&fields=ANSWER,QUESTION_ID`).then((res) => res.json());
-      
-        const questions: any[] = [];
-    
-        form.PAGES.forEach((quiz: { QUIZES: Quiz[]; })=>{
-          quiz.QUIZES.forEach(group=>{
-            group.QUESTIONS.forEach(questionGroup=>{
-              questionGroup.GROUP.forEach(q=>{
-                if(q.IS_REQUIRED)
-                questions.push(q)
-              })
-            })
-          })
-        })
-    
-        let not_finished:any = [];
+  /**
+   * 3. Verifica quais perguntas obrigatórias não foram respondidas
+   */
+  useEffect(() => {
+    if (!allAnswers || allAnswers.length === 0) return;
+    if (!form) return;
 
-        questions.forEach(question => {
-          let hasResponse = responses.filter((response:any)=>{
-            return response.QUESTION_ID == question._id
-          })
-    
-          hasResponse = hasResponse[hasResponse.length -1]; 
-    
-          if(!hasResponse  ||  hasResponse?.ANSWER?.trim().length == 0){
-            not_finished.push(question.Question)
-          }
-          
+    // Extrai todas as perguntas obrigatórias do form
+    const requiredQuestions: Question[] = [];
+    form.PAGES.forEach((quiz: { QUIZES: Quiz[] }) => {
+      quiz.QUIZES.forEach((group) => {
+        group.QUESTIONS.forEach((questionGroup) => {
+          questionGroup.GROUP.forEach((q) => {
+            if (q.IS_REQUIRED) {
+              requiredQuestions.push(q);
+            }
+          });
         });
-    
-        setPerguntasFaltantes(not_finished)
-      }
+      });
+    });
 
-      getRequiredQuestionsNotAnswered()
+    // Filtra as obrigatórias que NÃO têm resposta ou cujo conteúdo está vazio
+    const notAnswered = requiredQuestions.filter((rq) => {
+      // Procura a resposta correspondente na lista "allAnswers"
+      const resp = allAnswers
+        .filter((a) => a.QUESTION_ID === rq._id)
+        .pop(); // pega a última resposta encontrada (se houver)
 
+      // Se não existir resposta ou estiver vazia, então é "not answered"
+      return !resp || !resp.ANSWER?.trim();
+    });
+
+    // Mapeia para o texto da pergunta (ou outro campo)
+    setPerguntasFaltantes(notAnswered.map((q) => q.QUESTION));
+  }, [allAnswers, form]);
+
+  /**
+   * Cálculo de cor do card de acordo com a porcentagem de questões do coordenador respondidas
+   */
+  const getBackgroundColor = () => {
+    // Se não tiver nenhuma questão do coordenador, retorna cor neutra
+    if (!questoesCoordenador || questoesCoordenador.length === 0) {
+      return 'bg-white';
     }
 
-    getRequiredQuestion();
-
-  },[form, centro._id])
-
-
-  const getBackgroundColor = () => {
-    let questions = 0;
+    let questions = questoesCoordenador.length;
     let answered = 0;
 
-    questoes_coordenador.every(
-      (qa) => {
-        questions++
-        const hasAnswer = qa.answer?.ANSWER?.trim().length > 0
-        
-        if(hasAnswer){
-          answered++;
-        }
-        return hasAnswer}
-    );
+    questoesCoordenador.forEach(({ answer }) => {
+      if (answer?.ANSWER?.trim()) {
+        answered++;
+      }
+    });
 
-    const percentage = 100* (answered / questions);
-    
-    const okThreshold = 50;
-    const completeThreshold = 100
+    const percentage = (answered / questions) * 100;
 
-    if (percentage< okThreshold) {
+    if (percentage === 0) {
       return 'bg-red-200';
     }
-    if (percentage > okThreshold  && percentage < completeThreshold) {
+    if (percentage < 50) {
+      return 'bg-red-200';
+    } else if (percentage < 100) {
       return 'bg-yellow-200';
+    } else {
+      return 'bg-green-200'; // 100% respondidas
     }
-    if (percentage == completeThreshold) {
-      return 'bg-green-200';
-    }
-    return 'bg-white';
   };
 
+  /**
+   * Navega para a rota summary_coord com o ID do centro
+   */
   const handleCardClick = () => {
-    // Navega para a rota summary_coord com o ID do regional
     router.push(`/summary/${centro._id}`);
   };
 
-  const handleAnswerChange = (questionId:string,answerId: string | null, newAnswer: Answer) => {
-    const updatedQuestoesCoordenador:QuestionAnswer[] = questoes_coordenador;
-
-    for (let index = 0; index < updatedQuestoesCoordenador.length; index++) {
-      const questionAnswer = updatedQuestoesCoordenador[index];
-      const { answer} = questionAnswer
-      if(answer._id == answerId){
-        updatedQuestoesCoordenador[index].answer = newAnswer
-      }      
-    }
-  
-    setCoordenadorQuestoes(updatedQuestoesCoordenador);
+  /**
+   * Callback para atualizar uma resposta pontual no estado local
+   * (caso você precise refletir a mudança localmente sem bater na API toda hora).
+   */
+  const handleAnswerChange = (
+    questionId: string,
+    answerId: string | null,
+    newAnswer: Answer
+  ) => {
+    setQuestoesCoordenador((prev) =>
+      prev.map((qa) => {
+        if (qa.answer?._id === answerId) {
+          return { ...qa, answer: newAnswer };
+        }
+        return qa;
+      })
+    );
   };
 
-  const onInputChange = () =>{
-
-  }
+  /**
+   * Se quiser manipular o input localmente
+   */
+  const onInputChange = () => {
+    // ...
+  };
 
   return (
     <Card
-    className={`m-4 w-64 border border-gray-300  rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
+      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
     >
       <CardHeader>
         <CardTitle>{centro.NOME_CENTRO}</CardTitle>
-        <CardDescription>{centro.NOME_CURTO} {centro.data_avaliacao}</CardDescription>
+        <CardDescription>
+          {centro.NOME_CURTO} {centro.data_avaliacao}
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div>Avaliação: <FormInput 
-          type="text" 
-          isDisabled={true} 
-          name="situacao" 
-          value={situacao}
-          onChange={onInputChange}
-          options={avaliacao_question.PRESET_VALUES} />
-        </div>
 
-        {questoes_coordenador.map((questionAnswered, index) => (
-        <div key={index}>
-        <QuestionComponent
-          key={index}
-          centroId={centro._id}
-          answer={questionAnswered.answer}
-          question={questionAnswered.question}
-          questionIndex={index}
-          onAnswerChange={handleAnswerChange}
+      <CardContent>
+        <div>
+          Avaliação:
+          <FormInput
+            type="text"
+            isDisabled
+            name="situacao"
+            value={situacao}
+            onChange={onInputChange}
+            options={avaliacao_question.PRESET_VALUES}
           />
         </div>
+
+        {questoesCoordenador.map((questionAnswered, index) => (
+          <div key={index}>
+            <QuestionComponent
+              centroId={centro._id}
+              answer={questionAnswered.answer || { _id: '', QUESTION_ID: '', ANSWER: '', CENTRO_ID: '', QUIZ_ID: '' }}
+              question={questionAnswered.question}
+              questionIndex={index}
+              onAnswerChange={handleAnswerChange}
+            />
+          </div>
         ))}
 
         <p>Perguntas Faltantes: {perguntasFaltantes.length}</p>
-        </CardContent>
+      </CardContent>
+
       <CardFooter onClick={handleCardClick}>
-        <p className="text-xs cursor-pointer">Clique para ver as respostas</p>
+        <p className="text-xs cursor-pointer">
+          Clique para ver as respostas
+        </p>
       </CardFooter>
     </Card>
   );

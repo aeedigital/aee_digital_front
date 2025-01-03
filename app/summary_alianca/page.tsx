@@ -39,9 +39,9 @@ export default function Summary_Alianca({ params }: SummaryProps) {
         setError(err.message);
       }
     }
-
+console.log("VAI PEGAR TUDO")
     fetchRegionais();
-  }, [period]);
+  }, []);
 
   if (error) {
     return <div>Erro ao carregar regionais: {error}</div>;
