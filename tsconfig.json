@@ -22,7 +22,8 @@
       "@/*": ["./*"],
       "@components/*":["./components/*"],
       "@/interfaces/*":["./interfaces/*"],
-      "@/hooks/*":["./components/hooks/*"]
+      "@/hooks/*":["./components/hooks/*"],
+      "@/helpers/*":["./app/helpers/*"],
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/about"],
