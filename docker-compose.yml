@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: "http://aee_digital_api:5000"
+        NEXT_PUBLIC_API_URL: "http://aee_digital_api:5001"
 
     ports:
       - "3000:3000"
@@ -14,7 +14,7 @@ services:
     networks:
       - aee_digital_backend
     environment:
-      - NEXT_PUBLIC_API_URL=http://aee_digital_api:5000
+      - NEXT_PUBLIC_API_URL=http://aee_digital_api:5001
 
 networks:
   aee_digital_backend:
