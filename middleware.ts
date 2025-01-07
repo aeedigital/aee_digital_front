@@ -9,7 +9,8 @@ export function middleware(request: NextRequest) {
 
     const userType = request.cookies.get('userType')?.value || request.headers.get('user-type');
 
-    if (userType) {
+    if (userType != 'undefined') {
+
       const hasAccess = canAccessPage(userType as 'coord_geral' | 'coord_regional' | 'presidente', path);
       if (!hasAccess) {
         url.pathname = '/login'; // Redireciona para login ou página de acesso negado
