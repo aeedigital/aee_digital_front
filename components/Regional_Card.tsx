@@ -65,8 +65,8 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId }) => {
   const router = useRouter();
 
   const handleCardClick = () => {
-    // Navega para a rota summary_coord com o ID do regional
-    router.push(`/summary_coord/${regionalId}`);
+    // Navega para a rota com o ID do regional
+    router.push(`/resumo/coordenador/${regionalId}`);
   };
 
   return (

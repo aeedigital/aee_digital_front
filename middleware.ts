@@ -27,8 +27,8 @@ export function middleware(request: NextRequest) {
 // Aplicar o middleware apenas para rotas específicas
 export const config = {
   matcher: [
-    '/summary_alianca/:path*',
-    '/summary_coord/:path*',
+    '/resumo/alianca/:path*',
+    '/resumo/coordenador/:path*',
     '/'
   ],
 };

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
+
 import "./globals.css"; // Certifique-se de que o caminho esteja correto
 import LogoutButton from "@/components/Logout";
 
@@ -18,21 +19,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
       <body className="bg-gray-50 dark:bg-gray-900">
         <header className="flex items-center justify-between p-4 bg-white shadow dark:bg-gray-800">
           {/* Logo */}
-          <div className="flex items-center">
+          <Link href="/">
+
+          <div id="logo" className="flex items-center">
             <Image
-              src="/logo-aee2-completo-vetor.png"
-              width={150}
-              height={40}
+              src="/logo-aee2-vetor.png"
+              width={300}
+              height={80}
               alt="Logo"
               className="h-auto w-auto"
             />
-          </div>
-
+        <h2 className="text-4xl font-bold" style={{ color: '#63A9BF' }}> Aliança Digital </h2>
+        </div>
+        </Link>
           {/* User Profile Section */}
           <div className="relative flex items-center">
             <DropdownMenu>
