@@ -9,7 +9,10 @@ export function middleware(request: NextRequest) {
 
     const userType = request.cookies.get('userType')?.value || request.headers.get('user-type');
 
-    if (userType) {
+console.log("userType",typeof userType, userType)
+
+if (userType && userType !== 'undefined' && userType !== 'null') {
+  console.log("path", path)
       const hasAccess = canAccessPage(userType as 'coord_geral' | 'coord_regional' | 'presidente', path);
       if (!hasAccess) {
         url.pathname = '/login'; // Redireciona para login ou página de acesso negado
@@ -26,8 +29,8 @@ export function middleware(request: NextRequest) {
 // Aplicar o middleware apenas para rotas específicas
 export const config = {
   matcher: [
-    '/summary_alianca/:path*',
-    '/summary_coord/:path*',
+    '/resumo/alianca/:path*',
+    '/resumo/coordenador/:path*',
     '/'
   ],
 };

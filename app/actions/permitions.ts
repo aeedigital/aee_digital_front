@@ -2,15 +2,27 @@
 export type UserRole = 'coord_geral' | 'coord_regional' | 'presidente';
 
 const permissions: Record<UserRole, RegExp[]> = {
-  coord_geral: [/^\/$/, /^\/summary(\/[^\/]+)?$/, /^\/summary_coord(\/[^\/]+)?$/, /^\/summary_alianca$/],
-  coord_regional: [/^\/$/, /^\/summary(\/[^\/]+)?$/, /^\/summary_coord(\/[^\/]+)?$/],
-  presidente: [/^\/$/, /^\/summary(\/[^\/]+)?$/],
+  coord_geral: [
+    /^\/$/,
+    /^\/cadastro(\/[^\/]+)?$/,
+    /^\/resumo\/coordenador(\/[^\/]+)?$/,
+    /^\/resumo\/alianca$/
+  ],
+  coord_regional: [
+    /^\/$/,
+    /^\/cadastro(\/[^\/]+)?$/,
+    /^\/resumo\/coordenador(\/[^\/]+)?$/
+  ],
+  presidente: [
+    /^\/$/,
+    /^\/cadastro(\/[^\/]+)?$/
+  ],
 };
 
 const initialPage: Record<UserRole, string> ={
-  coord_geral: '/summary_alianca',
-  coord_regional: '/summary_coord',
-  presidente: '/summary'
+  coord_geral: '/resumo/alianca',
+  coord_regional: '/resumo/coordenador',
+  presidente: '/cadastro'
 }
 
 export function getInitialPage(userRole: UserRole, scope: string | undefined){
@@ -26,6 +38,9 @@ export function getInitialPage(userRole: UserRole, scope: string | undefined){
 }
 
 export function canAccessPage(userRole: UserRole, pagePath: string): boolean {
+  
+  console.log("userRole", userRole)
+  
   const allowedPages = permissions[userRole];
   return allowedPages.some((pattern) => pattern.test(pagePath));
 }

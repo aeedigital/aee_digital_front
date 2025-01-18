@@ -113,12 +113,12 @@ export default function LoginPage() {
               <Button onClick={handleLogin} disabled={isLoading} className="w-full">
                 {isLoading ? 'Carregando...' : 'Login'}
               </Button>
-              <p className="text-sm text-gray-500">
+              {/* <p className="text-sm text-gray-500">
                 Não tem uma conta?{' '}
                 <a href="/register" className="text-blue-500 hover:underline">
                   Cadastre-se
                 </a>
-              </p>
+              </p> */}
             </CardFooter>
           </Card>
         </div>

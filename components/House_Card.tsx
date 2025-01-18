@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+import { AiOutlineHistory } from "react-icons/ai"; // Importa o ícone desejado
+
 import { Quiz, Question, Answer } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
 
@@ -78,7 +80,7 @@ const House_Card: React.FC<CardProps> = ({
 
     // A) Define a situacao
     const answerAvaliacao = allAnswers.find(
-      (ans) => ans.QUESTION_ID === avaliacao_question._id
+      (ans) => ans.QUESTION_ID === avaliacao_question?._id
     );
     setSituacao(answerAvaliacao?.ANSWER || '');
 
@@ -161,10 +163,14 @@ const House_Card: React.FC<CardProps> = ({
   };
 
   /**
-   * Navega para a rota summary_coord com o ID do centro
+   * Navega para a rota cadastro com o ID do centro
    */
   const handleCardClick = () => {
-    router.push(`/summary/${centro._id}`);
+    router.push(`/cadastro/${centro._id}`);
+  };
+
+  const handleHistoryClick = () => {
+    router.push(`/cadastro/historico/${centro._id}`);
   };
 
   /**
@@ -213,7 +219,7 @@ const House_Card: React.FC<CardProps> = ({
             name="situacao"
             value={situacao}
             onChange={onInputChange}
-            options={avaliacao_question.PRESET_VALUES}
+            options={avaliacao_question?.PRESET_VALUES}
           />
         </div>
 
@@ -232,10 +238,16 @@ const House_Card: React.FC<CardProps> = ({
         <p>Perguntas Faltantes: {perguntasFaltantes.length}</p>
       </CardContent>
 
-      <CardFooter onClick={handleCardClick}>
-        <p className="text-xs cursor-pointer">
+      <CardFooter >
+        <p className="text-xs cursor-pointer" onClick={handleCardClick}>
           Clique para ver as respostas
         </p>
+
+        {/* Ícone que redireciona para a página de histórico */}
+        <AiOutlineHistory
+          className="text-lg cursor-pointer text-blue-500 hover:text-blue-700"
+          onClick={handleHistoryClick}
+        />
       </CardFooter>
     </Card>
   );

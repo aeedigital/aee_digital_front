@@ -11,13 +11,16 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
+import { appendDatePeriod, Period } from '@/helpers/datePeriodHelper';
+
 interface CardProps {
   nome: string;
   pais: string;
   regionalId: string;
+  period: Period;
 }
 
-const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId }) => {
+const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) => {
   const [centrosCount, setCentrosCount] = useState<number | null>(null);
   const [finalizadosCount, setFinalizadosCount] = useState<number | null>(null);
 
@@ -34,7 +37,13 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId }) => {
       const centros = await res.json();
       setCentrosCount(centros.length);
 
-      const summaryRes = await fetch(`/api/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`);
+      let summaryPath = `/api/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`;
+
+      if (period.start && period.end) {
+        summaryPath = appendDatePeriod(summaryPath, period);
+      }
+
+      const summaryRes = await fetch(summaryPath);
       const data = await summaryRes.json();
 
       const uniqueCentroIds = new Set(data.map((item: any) => item.CENTRO_ID));
@@ -65,8 +74,8 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId }) => {
   const router = useRouter();
 
   const handleCardClick = () => {
-    // Navega para a rota summary_coord com o ID do regional
-    router.push(`/summary_coord/${regionalId}`);
+    // Navega para a rota com o ID do regional
+    router.push(`/resumo/coordenador/${regionalId}`);
   };
 
   return (
