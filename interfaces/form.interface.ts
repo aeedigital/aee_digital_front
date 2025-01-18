@@ -20,6 +20,7 @@ export interface Quiz {
 export interface Page {
   QUIZES: Quiz[];
   PAGE_NAME: string;
+  ROLE?: string;
 }
 
 export interface Answer {

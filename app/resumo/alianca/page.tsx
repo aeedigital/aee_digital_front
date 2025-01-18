@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from "next/navigation";
+
+
 import Regional_Card from '@/components/Regional_Card';
-import { appendDatePeriod, Period } from '@/helpers/datePeriodHelper';
+import { Period } from '@/helpers/datePeriodHelper';
 import { Regional } from '@/interfaces/centro.interface';
 
 interface SummaryProps {
@@ -13,8 +16,15 @@ interface SummaryProps {
 }
 
 export default function Summary_Alianca({ params }: SummaryProps) {
-  const { start, end } = params;
+  // 1. Usamos o hook para acessar os query params:
+  const searchParams = useSearchParams();
+
+  // 2. Lemos start e end diretamente da URL: ?start=YYYY-MM-DD&end=YYYY-MM-DD
+  const start = searchParams.get("start") || "";
+  const end = searchParams.get("end") || "";
+
   const period: Period = { start, end };
+  console.log("Period", period)
 
   const [regionais, setRegionais] = useState<Regional[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -23,9 +33,6 @@ export default function Summary_Alianca({ params }: SummaryProps) {
     async function fetchRegionais() {
       try {
         let apiPath = `/api/regionais`;
-
-        // Aplica os parâmetros de período à URL
-        apiPath = appendDatePeriod(apiPath, period);
 
         const regionaisData: Regional[] = await fetch(apiPath).then((res) => res.json());
 
@@ -54,8 +61,11 @@ export default function Summary_Alianca({ params }: SummaryProps) {
           nome={regional.NOME_REGIONAL}
           pais={regional.PAIS}
           regionalId={regional._id}
+          period={period}
         />
       ))}
     </div>
   );
 }
+
+

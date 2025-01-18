@@ -80,7 +80,7 @@ const House_Card: React.FC<CardProps> = ({
 
     // A) Define a situacao
     const answerAvaliacao = allAnswers.find(
-      (ans) => ans.QUESTION_ID === avaliacao_question._id
+      (ans) => ans.QUESTION_ID === avaliacao_question?._id
     );
     setSituacao(answerAvaliacao?.ANSWER || '');
 
@@ -219,7 +219,7 @@ const House_Card: React.FC<CardProps> = ({
             name="situacao"
             value={situacao}
             onChange={onInputChange}
-            options={avaliacao_question.PRESET_VALUES}
+            options={avaliacao_question?.PRESET_VALUES}
           />
         </div>
 

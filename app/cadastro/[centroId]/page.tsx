@@ -6,9 +6,13 @@ import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
 import { CompletionNotification } from "@components/CompletionNotification";
 import { Answer, Page } from "@/interfaces/form.interface";
+import { useSearchParams } from "next/navigation";
 
 export default function DynamicPage({ params }: any) {
   const { centroId } = params;
+
+  const searchParams = useSearchParams();
+    
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -16,6 +20,62 @@ export default function DynamicPage({ params }: any) {
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
   const [formId, setFormId] = useState<string>("");
   const [showCompletionNotification, setShowCompletionNotification] = useState(false);
+
+  // Fetch de dados baseado no summaryId ou centroId
+  useEffect(() => {
+    let summaryId = searchParams.get("summaryId");
+
+    async function fetchData() {
+      setIsLoading(true);
+
+      try {
+        const formResponse = await fetch(
+          "/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual"
+        ).then((res) => res.json());
+
+        let answers;
+
+        if (summaryId) {
+          const summary = await fetch(`/api/summaries/${summaryId}`).then((res) => res.json());
+          answers = summary?.QUESTIONS.map((answer: any) => ({
+            QUESTION_ID: answer.QUESTION,
+            CENTRO_ID: summary.CENTRO_ID,
+            ANSWER: answer.ANSWER,
+            _id: answer._id,
+          }));
+        } else {
+          answers = await fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) => res.json());
+        }
+
+        const cache: Record<string, any[]> = {};
+        answers.forEach((answer: Answer) => {
+          const questionId = answer.QUESTION_ID;
+          if (!cache[questionId]) {
+            cache[questionId] = [];
+          }
+          cache[questionId].push(answer);
+        });
+
+        const firstFormResponse = formResponse[0];
+
+        console.log("firstFormResponse", firstFormResponse);
+
+        const formWithoutRolePages = firstFormResponse.PAGES.filter((page:Page) => page.ROLE !== "coord_regional");
+
+        console.log("formWithoutRole", formWithoutRolePages);
+
+        setAnswersCache(cache);
+        setPages(formWithoutRolePages);
+        setFormId(firstFormResponse._id);
+      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [centroId]);
 
   const handleAnswerChange = async (
     questionId: string,
@@ -47,31 +107,6 @@ export default function DynamicPage({ params }: any) {
     });
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      const [formResponse, answers] = await Promise.all([
-        fetch("/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual").then((res) => res.json()),
-        fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) => res.json()),
-      ]);
-
-      let cache: Record<string, any[]> = {};
-      answers.forEach((answer: Answer) => {
-        const questionId = answer.QUESTION_ID;
-        if (!cache[questionId]) {
-          cache[questionId] = [];
-        }
-        cache[questionId].push(answer);
-      });
-
-      const firstFormResponse = formResponse[0];
-      setAnswersCache(cache);
-      setPages(firstFormResponse.PAGES);
-      setFormId(firstFormResponse._id);
-      setIsLoading(false);
-    }
-    fetchData();
-  }, [centroId]);
-
   const handlePreviousPage = () => {
     setCurrentPageIndex((prev) => Math.max(prev - 1, 0));
   };
@@ -85,7 +120,7 @@ export default function DynamicPage({ params }: any) {
   };
 
   return (
-    <div className="w-full p-6">
+    <div className="w-full">
       {isLoading ? (
         <div className="space-y-4">
           <div className="flex space-x-4">
@@ -115,23 +150,25 @@ export default function DynamicPage({ params }: any) {
                 ))}
               </div>
 
-              <div className="flex justify-between items-center mt-6">
+              <div className="mt-6 flex flex-col items-center space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
                 <button
                   disabled={currentPageIndex === 0}
                   onClick={handlePreviousPage}
-                  className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+                  className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
                   Anterior
                 </button>
 
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   {pages.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentPageIndex(index)}
                       className={`px-4 py-2 rounded ${
-                        currentPageIndex === index ? "bg-blue-500 text-white" : "bg-gray-300"
-                      } hover:bg-blue-400`}
+                        currentPageIndex === index
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-300 hover:bg-blue-400"
+                      }`}
                     >
                       {index + 1}
                     </button>
@@ -141,7 +178,7 @@ export default function DynamicPage({ params }: any) {
                 <button
                   disabled={currentPageIndex === pages.length}
                   onClick={handleNextPage}
-                  className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+                  className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
                   Próximo
                 </button>
@@ -160,13 +197,7 @@ export default function DynamicPage({ params }: any) {
             />
           )}
 
-          {showCompletionNotification && (
-            <CompletionNotification
-              onSendEmail={() => {
-                console.log("Resumo enviado por e-mail!");
-              }}
-            />
-          )}
+          {showCompletionNotification && <CompletionNotification />}
         </div>
       )}
     </div>

@@ -9,11 +9,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { useRouter } from 'next/navigation';
+
 interface CardProps {
   createdAt: string;
   updatedAt: string;
   formId: string;
   answers: any;
+  _id: string;
+  centroId?: string;
 }
 
 const Summary_Card: React.FC<CardProps> = ({
@@ -21,7 +25,11 @@ const Summary_Card: React.FC<CardProps> = ({
   updatedAt,
   formId,
   answers,
+  _id,
+  centroId
 }) => {
+
+  const router = useRouter();
   
   // 1. Converter as strings para objeto Date
   const createdDate = new Date(createdAt);
@@ -45,18 +53,24 @@ const Summary_Card: React.FC<CardProps> = ({
     minute: "2-digit",
   });
 
+  const handleCardClick = () => {
+    // 3. Navegar para a página de detalhes da resposta
+    router.push(`/cadastro/${centroId}?summaryId=${_id}`);
+  }
+
   return (
     <Card
     className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg p-4`}
+    onClick={handleCardClick}
     >
       <CardHeader>
         <CardTitle>Resumo</CardTitle>
       </CardHeader>
       <CardContent>
         <CardDescription>
-          <p>Formulário: {formId}</p>
-          <p>Criado em: {formattedCreatedAt}</p>
-          <p>Atualizado em: {formattedUpdatedAt}</p>
+          Formulário: {formId}<br/>
+          Criado em: {formattedCreatedAt}<br/>
+          Atualizado em: {formattedUpdatedAt}<br/>
         </CardDescription>
       </CardContent>
       <CardFooter>

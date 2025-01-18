@@ -38,6 +38,9 @@ export function getInitialPage(userRole: UserRole, scope: string | undefined){
 }
 
 export function canAccessPage(userRole: UserRole, pagePath: string): boolean {
+  
+  console.log("userRole", userRole)
+  
   const allowedPages = permissions[userRole];
   return allowedPages.some((pattern) => pattern.test(pagePath));
 }

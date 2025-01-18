@@ -14,7 +14,14 @@ export default function Historico({params}:any) {
         async function fetchData(){
             const res = await fetch(`/api/centros/${centroId}/summaries?sortBy=updatedAt:desc`);
             const data = await res.json();
-            setSummaries(data);
+
+            const filteredDataOrderedByCreatedDate = data.sort((a:any, b:any) => {
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            });
+
+            console.log("SUMMARIEAS", filteredDataOrderedByCreatedDate);
+
+            setSummaries(filteredDataOrderedByCreatedDate);
         }
         fetchData();
     },[])
@@ -29,10 +36,11 @@ export default function Historico({params}:any) {
                     updatedAt={summary.updatedAt}
                     formId={summary.FORM_ID}
                     answers={summary.QUESTIONS}
+                    _id={summary._id}
+                    centroId={summary.CENTRO_ID}
                 />
             ))}
         </div>
-
     )
 
 
