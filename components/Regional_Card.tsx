@@ -17,7 +17,7 @@ interface CardProps {
   nome: string;
   pais: string;
   regionalId: string;
-  period: Period;
+  period: Period | undefined;
 }
 
 const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) => {
@@ -39,16 +39,19 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
 
       let summaryPath = `/api/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`;
 
-      if (period.start && period.end) {
+      if (period?.start && period?.end) {
         summaryPath = appendDatePeriod(summaryPath, period);
       }
 
       const summaryRes = await fetch(summaryPath);
       const data = await summaryRes.json();
 
-      const uniqueCentroIds = new Set(data.map((item: any) => item.CENTRO_ID));
-      const finalizadosTotal = uniqueCentroIds.size;
+      let finalizadosTotal = 0;
 
+      if (data.length >0) {
+        const uniqueCentroIds = new Set(data.map((item: any) => item.CENTRO_ID));
+        finalizadosTotal = uniqueCentroIds.size;
+      }
       setFinalizadosCount(finalizadosTotal);
     }
 
@@ -65,10 +68,8 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
     if (finalizadosCount >= centrosCount) {
       return 'bg-green-200'; // Cor verde se todos estiverem finalizados
     }
-    if (finalizadosCount >= centrosCount / 2) {
-      return 'bg-yellow-200'; // Cor amarela se metade ou mais estiver finalizado
-    }
-    return 'bg-white'; // Cor padrão
+  
+    return 'bg-yellow-200'; // Cor padrão
   };
 
   const router = useRouter();

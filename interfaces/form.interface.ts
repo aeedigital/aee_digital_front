@@ -38,3 +38,18 @@ export interface Form {
   CREATEDBY: string;
   VERSION: number;
 }
+
+export interface SummaryResponse {
+  ANSWER: string;
+  QUESTION: string
+  _id: string
+}
+
+export interface Summary {
+  _id: string;
+  CENTRO_ID: string;
+  FORM_ID: string;
+  QUESTIONS: SummaryResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
