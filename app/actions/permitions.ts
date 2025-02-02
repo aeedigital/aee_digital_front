@@ -6,12 +6,15 @@ const permissions: Record<UserRole, RegExp[]> = {
     /^\/$/,
     /^\/cadastro(\/[^\/]+)?$/,
     /^\/resumo\/coordenador(\/[^\/]+)?$/,
+    /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/,
     /^\/resumo\/alianca$/
   ],
   coord_regional: [
     /^\/$/,
     /^\/cadastro(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?$/
+    /^\/resumo\/coordenador(\/[^\/]+)?$/,
+    /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/
+
   ],
   presidente: [
     /^\/$/,
@@ -34,6 +37,7 @@ export function getInitialPage(userRole: UserRole, scope: string | undefined){
   }else{
     path = pagePath
   }
+
   return path
 }
 

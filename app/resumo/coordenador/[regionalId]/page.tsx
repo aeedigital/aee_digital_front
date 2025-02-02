@@ -5,6 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import House_Card from '@/components/House_Card';
 import { Question} from '@/interfaces/form.interface'
 import ValidacaoCoordenacao from '@/components/ValidacaoCoordenacao';
+import { getCadastroInfo } from "@/app/actions/cadastroInfo";
+import { appendDatePeriod, Period } from '@/app/helpers/datePeriodHelper';
+import { Centro } from '@/interfaces/centro.interface';
+
 
 const SkeletonCard = () => (
   <div style={{ width: "300px", height: "200px", margin: "10px", background: "#e0e0e0", borderRadius: "8px", animation: "pulse 1.5s infinite" }} />
@@ -18,6 +22,8 @@ export default function MainPage({params}:any) {
   const [coordenador, setCoordenador] = useState("");
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
+  const [summaryByCentroId, setSummaryByCentroId] = useState<{ [key: string]: any }>({});
+  
   const hasLoadedRef = useRef(false); // Use useRef instead of useState
   const [avaliacaoQuestion, setAvaliacaoQuestion] = useState<Question >({
     _id: "",
@@ -58,19 +64,24 @@ export default function MainPage({params}:any) {
 
       hasLoadedRef.current = true; // Set ref value to true to prevent further calls
 
+      const cadastroInfo = await getCadastroInfo();
+
+      let summariesPath = `/api/regionais/${regionalId}/summaries`;
+
+      if (cadastroInfo?.start && cadastroInfo?.end) {
+        summariesPath = appendDatePeriod(summariesPath, { start: cadastroInfo.start, end: cadastroInfo.end });
+        }
+
       let [regionalData, centrosData, summariesData, formData] = await Promise.all([
         fetch(`/api/regionais/${regionalId}`).then((res) => res.json()),
         fetch(`/api/centros?REGIONAL=${regionalId}`).then((res) => res.json()),
-        fetch(`/api/regionais/${regionalId}/summaries`).then((res) => res.json()),
-        fetch(`/api/forms?NAME=Cadastro de Informações Anual&sortBy=VERSION:desc`).then((res) => res.json())
+        fetch(summariesPath).then((res) => res.json()),
+        fetch(`/api/forms?_id=${cadastroInfo.formId}`).then((res) => res.json())
       ])
 
       const coordenador = await fetch(`/api/pessoas/${regionalData.COORDENADOR_ID}`).then((res) => res.json())
 
       const form = formData[0]
-
-
-console.log("FORM", form)
 
       setFormulario(form)
       const avaliacaoCategory = findQuestionByCategory(form, "Auto Avaliação")
@@ -86,6 +97,7 @@ console.log("FORM", form)
       setCoordenador(coordenador.NOME);
       setCentros(centrosData);
 
+
       const UniqueSummariesDataByCentroId = summariesData.reduce((acc: any, summary: any) => {
         if (!acc[summary.CENTRO_ID]) {
           acc[summary.CENTRO_ID] = summary;
@@ -93,6 +105,17 @@ console.log("FORM", form)
         return acc;
       }
       , {});
+
+
+      const summaries: { [key: string]: any[] } = {}
+      for (const summary of summariesData) {
+        if(!summaries[summary.CENTRO_ID]){
+          summaries[summary.CENTRO_ID] = []
+        }
+        summaries[summary.CENTRO_ID].push(summary)
+      }
+
+      setSummaryByCentroId(summaries);
 
       setTotalRespostas(Object.keys(UniqueSummariesDataByCentroId).length);
       setTotalCentros(centrosData.length);
@@ -123,16 +146,18 @@ console.log("FORM", form)
             coordenador={coordenador}
             totalRespostas={totalRespostas}
             totalCentros={totalCentros}
+            regionalId={regionalId}
           />
 
           <div style={{ display: "flex", flexWrap: "wrap" }}>
-            {centros.map((centro: any) => (
+            {centros.map((centro: Centro) => (
               <House_Card
                 key={centro._id}
                 centro={centro}
                 avaliacao_question={avaliacaoQuestion}
                 coordenador_questions={questoes_coordenador}
                 form={formulario}
+                summaries = {summaryByCentroId[centro._id]}
               />
             ))}
           </div>

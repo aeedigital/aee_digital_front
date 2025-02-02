@@ -3,13 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {Skeleton} from "@/components/ui/skeleton";
 
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
 interface ValidacaoCoordenacaoProps {
   coordenador: string;
   totalRespostas: number;
   totalCentros: number;
+  regionalId: string;
 }
 
-export default function ValidacaoCoordenacao({ coordenador, totalRespostas, totalCentros }: ValidacaoCoordenacaoProps) {
+export default function ValidacaoCoordenacao({ coordenador, totalRespostas, totalCentros, regionalId }: ValidacaoCoordenacaoProps) {
   const [currentTotalRespostas, setCurrentTotalRespostas] = useState(totalRespostas);
   const [currentTotalCentros, setCurrentTotalCentros] = useState(totalCentros);
 
@@ -40,6 +44,16 @@ export default function ValidacaoCoordenacao({ coordenador, totalRespostas, tota
               <div className="flex items-center space-x-2">
                 <span className="text-gray-600 font-medium">Total Centros:</span>
                 <span className="text-gray-800 font-semibold">{currentTotalCentros}</span>
+              </div>
+              <div>
+              <div style={{ marginTop: '1rem' }}>
+              <Button asChild variant="default">
+
+                <Link href={`/resumo/coordenador/${regionalId}/credenciais`}>
+                  Ver Logins e Senhas
+                </Link>
+                </Button>
+              </div>
               </div>
         </CardContent>
       </Card>

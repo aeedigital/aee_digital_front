@@ -19,8 +19,6 @@ export default function Historico({params}:any) {
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             });
 
-            console.log("SUMMARIEAS", filteredDataOrderedByCreatedDate);
-
             setSummaries(filteredDataOrderedByCreatedDate);
         }
         fetchData();

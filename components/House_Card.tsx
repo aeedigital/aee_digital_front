@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 
 import { AiOutlineHistory } from "react-icons/ai"; // Importa o ícone desejado
 
-import { Quiz, Question, Answer } from '@/interfaces/form.interface';
+import { Quiz, Question, Answer, Summary } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
+import { Centro } from '@/interfaces/centro.interface';
 
 import {
   Card,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/card"
 
 import FormInput from './FormInput';
-import { Centro } from '@/interfaces/centro.interface';
 import { QuestionComponent } from './QuestionComponent';
 
 interface CardProps {
@@ -24,6 +24,7 @@ interface CardProps {
   coordenador_questions: Question[];
   required_questions?: string[];
   form: any;
+  summaries: Summary[];
 }
 
 interface QuestionAnswer {
@@ -35,8 +36,11 @@ const House_Card: React.FC<CardProps> = ({
   centro, 
   avaliacao_question, 
   coordenador_questions, 
-  form 
+  form,
+  summaries
 }) => {
+
+
   const router = useRouter();
 
   // Estado que armazena TODAS as respostas do centro
@@ -57,7 +61,10 @@ const House_Card: React.FC<CardProps> = ({
   useEffect(() => {
     async function fetchAllAnswers() {
       try {
-        const res = await fetch(`/api/answers?CENTRO_ID=${centro._id}`);
+
+        let path = `/api/answers?CENTRO_ID=${centro._id}`
+
+        const res = await fetch(path);
         const data = await res.json();
         setAllAnswers(data);
       } catch (error) {
@@ -150,15 +157,20 @@ const House_Card: React.FC<CardProps> = ({
 
     const percentage = (answered / questions) * 100;
 
-    if (percentage === 0) {
+    if(summaries?.length === 0 || !summaries){
       return 'bg-red-200';
     }
-    if (percentage < 50) {
-      return 'bg-red-200';
-    } else if (percentage < 100) {
-      return 'bg-yellow-200';
-    } else {
-      return 'bg-green-200'; // 100% respondidas
+    else{
+      if (percentage === 0) {
+        return 'bg-red-200';
+      }
+      if (percentage < 50 ) {
+        return 'bg-red-200';
+      } else if (percentage < 100) {
+        return 'bg-yellow-200';
+      } else {
+        return 'bg-green-200'; // 100% respondidas
+      }
     }
   };
 
