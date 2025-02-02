@@ -18,8 +18,6 @@ import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Summary } from "@/interfaces/form.interface";
 import { Centro } from "@/interfaces/centro.interface";
 
-import { Skeleton } from "@/components/ui/skeleton";
-
 
 // Registra os componentes do Chart.js
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, BarElement, ChartDataLabels);
@@ -61,7 +59,7 @@ const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: "top" },
+    legend: { position: "top" as const },
     title: { display: true, text: "Eventos por Dia" },
   },
   scales: {
@@ -76,17 +74,17 @@ const barOptions = {
     legend: { display: true },
     title: { display: true, text: "Porcentagem de Respostas Pendentes" },
     datalabels: {
-      anchor: "end",
-      align: "top",
+      anchor: "end" as const,
+      align: "end" as const,
       formatter: (value: number) => `${value.toFixed(1)}%`,
       color: "black",
       font: {
-        weight: "bold",
+        weight: "bold" as const,
       },
     },
   },
   scales: {
-    y: { beginAtZero: true, max: 100, ticks: { callback: (value: number) => `${value}%` } },
+    y: { beginAtZero: true, max: 100, ticks: { callback: function(value: number | string) { return `${value}%`; } } },
   },
 };
 
