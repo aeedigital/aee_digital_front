@@ -48,8 +48,7 @@ export default function ValidacaoCoordenacao({ coordenador, totalRespostas, tota
               <div>
               <div style={{ marginTop: '1rem' }}>
               <Button asChild variant="default">
-
-                <Link href={`/resumo/coordenador/${regionalId}/credenciais`}>
+                <Link href={`/credenciais?scope_id=${regionalId}&scope=centro`}>
                   Ver Logins e Senhas
                 </Link>
                 </Button>
