@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import React from "react";
 
 interface BotaoCompartilharProps {
-  login: string;
-  senha: string;
+  user: string;
+  pass: string;
 }
 
-export function BotaoCompartilhar({ login, senha }: BotaoCompartilharProps) {
+export function BotaoCompartilhar({ user, pass }: BotaoCompartilharProps) {
   const handleShare = async () => {
     // Incluímos um contexto na mensagem antes das credenciais
     const textToShare = `Olá! Seguem as credenciais para acesso:
@@ -17,8 +17,8 @@ export function BotaoCompartilhar({ login, senha }: BotaoCompartilharProps) {
 
     Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
 
-    • Login: ${login}
-    • Senha: ${senha}
+    • Login: ${user}
+    • Senha: ${pass}
 
     Use-as com cuidado e não compartilhe com terceiros sem autorização.
     Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`;

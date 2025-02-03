@@ -1,61 +1,97 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BotaoCompartilhar } from "@/components/BotaoCompartilharComponent";
 
 import { Centro, Regional } from "@/interfaces/centro.interface";
 import { Pass } from "@/interfaces/auth.interface";
+import { useSearchParams } from "next/navigation";
 
 interface LoginSenha {
-    centro: Centro;
-    login: string;
-    senha: string;
-    };
+  scopeInfo: Centro | Regional;
+  scope: string;
+  user: string;
+  pass: string;
+};
+
+
+export default function CredenciaisPage() {
+  return (
+    <Suspense fallback={<p>Carregando credenciais...</p>}>
+      <CredenciaisContent />
+    </Suspense>
+  );
+}
+
 
 // Exemplo de busca — substitua com o que você usa (Prisma, fetch, etc.)
 
-export default function CredenciaisPage({
-    params,
-}: {
-    params: { regionalId: string };
-}) {
-    const { regionalId } = params;
+function CredenciaisContent() {
 
-    const [centrosInfo, setCentrosInfo] = useState<LoginSenha[]>([]);
-    const [regional, setRegional] = useState<Regional>();
-    
+  
+  const searchParams = useSearchParams();
+
+
+    const [scopeInfo, setContextInfo] = useState<LoginSenha[]>([]);
     
     useEffect(() => {
-        async function buscaCredenciaisDosCentros() {
-            // const centros = ;
-            // setCentros(centros);
-            const [regional, centros,passes] = await Promise.all([
-                await fetch(`/api/regionais/${regionalId}`).then((res) => res.json()),
-                await fetch(`/api/regionais/${regionalId}/centros`).then((res) => res.json()),
-                await fetch(`/api/passes`).then((res) => res.json())
-            ])
 
-            const centrosInfo = centros.map((centro: Centro) => {
+        async function  getPasses() {
+          const passes = await fetch(`/api/passes`).then((res) => res.json());
+          return passes;
+        }
+
+        async function buscaCredenciaisDosCentros() {
+            const centros = await fetch(`/api/regionais/${scope_id}/centros`).then((res) => res.json());
+            const passes = await getPasses();
+
+            const info = centros.map((centro: Centro) => {
                 const pass = passes.find((pass: Pass) => pass.scope_id === centro._id);
                 return {
-                    centro,
-                    login: pass?.user,
-                    senha: pass?.pass,
+                  scope: "centro",
+                  scopeInfo:centro,
+                    user: pass?.user,
+                    pass: pass?.pass,
                 };
             });
 
-            setCentrosInfo(centrosInfo);
-            setRegional(regional);
 
+            console.log("INFO", info)
+
+            setContextInfo(info);
         }
 
+        async function buscaCredenciaisDasRegionais() {
+            const regionais = await fetch(`/api/regionais`).then((res) => res.json());
+            const passes = await getPasses();
 
-        buscaCredenciaisDosCentros();
+            const info = regionais.map((regional: Regional) => {
+                const pass = passes.find((pass: Pass) => pass.scope_id === regional._id);
+                return {
+                  scope: "regional",
+                    scopeInfo: regional,
+                    user: pass?.user,
+                    pass: pass?.pass,
+                };
+            });
 
-        console.log("regionalId", regionalId);
-  }, [regionalId]);
+            setContextInfo(info);
+        }
+
+        let scope_id = searchParams.get("scope_id");
+        let scope = searchParams.get("scope");
+
+        console.log(scope_id, scope);
+
+        if(scope === "regional"){
+            buscaCredenciaisDasRegionais();
+        }else {
+            buscaCredenciaisDosCentros();
+        }
+
+  }, []);
 
 
   return (
@@ -63,9 +99,6 @@ export default function CredenciaisPage({
       <Card className="w-full shadow-lg rounded-lg bg-white border border-gray-200">
         <CardHeader>
           <CardTitle>Credenciais dos Centros</CardTitle>
-          <p className="text-sm text-gray-500">
-            Regional: <span className="font-medium">{regional?.NOME_REGIONAL}</span>
-          </p>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -88,20 +121,20 @@ export default function CredenciaisPage({
                 </tr>
               </thead>
               <tbody>
-                {centrosInfo.map((centrosInfo) => (
-                  <tr key={centrosInfo.centro._id}>
+                {scopeInfo.map((info) => (
+                  <tr key={info.scopeInfo._id}>
                     <td className="px-4 py-2 border-b border-gray-200">
-                      {centrosInfo.centro.NOME_CENTRO}
+                      {info.scope === "centro" ? (info.scopeInfo as Centro)?.NOME_CENTRO : (info.scopeInfo as Regional)?.NOME_REGIONAL}
                     </td>
                     <td className="px-4 py-2 border-b border-gray-200">
-                      {centrosInfo.login}
+                      {info.user}
                     </td>
                     <td className="px-4 py-2 border-b border-gray-200">
-                      {centrosInfo.senha}
+                      {info.pass}
                     </td>
                     <td className="px-4 py-2 border-b border-gray-200">
                       {/* Botão para compartilhar */}
-                      <BotaoCompartilhar login={centrosInfo.login} senha={centrosInfo.senha} />
+                      <BotaoCompartilhar user={info.user} pass={info.pass} />
                     </td>
                   </tr>
                 ))}
