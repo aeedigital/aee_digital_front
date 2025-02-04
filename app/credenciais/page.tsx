@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BotaoCompartilhar } from "@/components/BotaoCompartilharComponent";
+import { BotaoCopiar } from "@/components/BotaoCopiar";
 
 import { Centro, Regional } from "@/interfaces/centro.interface";
 import { Pass } from "@/interfaces/auth.interface";
@@ -134,7 +134,7 @@ function CredenciaisContent() {
                     </td>
                     <td className="px-4 py-2 border-b border-gray-200">
                       {/* Botão para compartilhar */}
-                      <BotaoCompartilhar user={info.user} pass={info.pass} />
+                      <BotaoCopiar user={info.user} pass={info.pass} />
                     </td>
                   </tr>
                 ))}
