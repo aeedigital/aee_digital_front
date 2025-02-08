@@ -7,11 +7,14 @@ import { ValidationTab } from "@components/ValidationTab";
 import { CompletionNotification } from "@components/CompletionNotification";
 import { Answer, Page } from "@/interfaces/form.interface";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from 'next/navigation';
+
 
 export default function DynamicPage({ params }: any) {
   const { centroId } = params;
 
   const searchParams = useSearchParams();
+  const router = useRouter();
     
 
   const [pages, setPages] = useState<Page[]>([]);
@@ -19,7 +22,6 @@ export default function DynamicPage({ params }: any) {
   const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({});
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
   const [formId, setFormId] = useState<string>("");
-  const [showCompletionNotification, setShowCompletionNotification] = useState(false);
 
   // Fetch de dados baseado no summaryId ou centroId
   useEffect(() => {
@@ -58,11 +60,7 @@ export default function DynamicPage({ params }: any) {
 
         const firstFormResponse = formResponse[0];
 
-        console.log("firstFormResponse", firstFormResponse);
-
         const formWithoutRolePages = firstFormResponse.PAGES.filter((page:Page) => page.ROLE !== "coord_regional");
-
-        console.log("formWithoutRole", formWithoutRolePages);
 
         setAnswersCache(cache);
         setPages(formWithoutRolePages);
@@ -116,7 +114,7 @@ export default function DynamicPage({ params }: any) {
   };
 
   const handleFormCompletion = () => {
-    setShowCompletionNotification(true);
+    router.push(`/cadastro/agradecimento`);
   };
 
   return (
@@ -196,8 +194,6 @@ export default function DynamicPage({ params }: any) {
               onComplete={handleFormCompletion}
             />
           )}
-
-          {showCompletionNotification && <CompletionNotification />}
         </div>
       )}
     </div>
