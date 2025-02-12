@@ -1,5 +1,6 @@
 'use client';
 
+import { useUser } from "@/context/UserContext";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
@@ -22,6 +23,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const { setUser } = useUser();
+
   async function Auth(user: string, pass: string): Promise<Authorization>{
     
     const users: any[] = await fetch(`/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
@@ -36,6 +39,15 @@ export default function LoginPage() {
     {
         scope = userInfo?.scope_id
     }
+
+    setUser({
+      _id: userInfo._id,
+      user,
+      pass,
+      role,
+      scope
+    });
+
     return {
         scope,
         role
