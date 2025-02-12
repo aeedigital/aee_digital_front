@@ -22,7 +22,7 @@ export default function HomePage() {
 
       // Redireciona para a página correspondente ao papel do usuário
       const redirectPage = getInitialPage(userRole, scope) || '/login';
-
+      
       router.push(redirectPage);
     }
   }, [router]);
