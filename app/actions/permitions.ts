@@ -1,13 +1,21 @@
 // /app/actions/permissions.ts
-export type UserRole = 'coord_geral' | 'coord_regional' | 'presidente';
+export type UserRole = 'coord_geral' | 'coord_regional' | 'presidente' | 'admin';
 
 const permissions: Record<UserRole, RegExp[]> = {
+  admin:[
+    /^\/$/,
+    /^\/cadastro(\/[^\/]+)?$/,
+    /^\/resumo\/coordenador(\/[^\/]+)?$/,
+    /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/,
+    /^\/resumo\/alianca(\/[^\/]+)?$/,
+    /^\/pessoas(\/[^\/]+)?$/,
+  ],
   coord_geral: [
     /^\/$/,
     /^\/cadastro(\/[^\/]+)?$/,
     /^\/resumo\/coordenador(\/[^\/]+)?$/,
     /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/,
-    /^\/resumo\/alianca$/
+    /^\/resumo\/alianca$(\/[^\/]+)?$/
   ],
   coord_regional: [
     /^\/$/,
@@ -23,6 +31,7 @@ const permissions: Record<UserRole, RegExp[]> = {
 };
 
 const initialPage: Record<UserRole, string> ={
+  admin: '/resumo/alianca',
   coord_geral: '/resumo/alianca',
   coord_regional: '/resumo/coordenador',
   presidente: '/cadastro'

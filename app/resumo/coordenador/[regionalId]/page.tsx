@@ -8,7 +8,11 @@ import ValidacaoCoordenacao from '@/components/ValidacaoCoordenacao';
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import { appendDatePeriod, Period } from '@/app/helpers/datePeriodHelper';
 import { Centro } from '@/interfaces/centro.interface';
+import { Pessoa } from '@/interfaces/pessoas.interface';
 
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUser } from "@/context/UserContext";
 
 const SkeletonCard = () => (
   <div style={{ width: "300px", height: "200px", margin: "10px", background: "#e0e0e0", borderRadius: "8px", animation: "pulse 1.5s infinite" }} />
@@ -17,9 +21,13 @@ const SkeletonCard = () => (
 export default function MainPage({params}:any) {
   const { regionalId } = params;
 
+  const { user } = useUser();
+
   const [loading, setLoading] = useState(true); // Estado para controlar o carregamento
   const [centros, setCentros] = useState([]);
-  const [coordenador, setCoordenador] = useState("");
+  const [coordenadores, setCoordenadores] = useState<Pessoa[]>([]);
+  const [selectedCoordenador, setSelectedCoordenador] = useState("");
+
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
   const [summaryByCentroId, setSummaryByCentroId] = useState<{ [key: string]: any }>({});
@@ -72,11 +80,12 @@ export default function MainPage({params}:any) {
         summariesPath = appendDatePeriod(summariesPath, { start: cadastroInfo.start, end: cadastroInfo.end });
         }
 
-      let [regionalData, centrosData, summariesData, formData] = await Promise.all([
+      let [regionalData, centrosData, summariesData, formData, pessoasData] = await Promise.all([
         fetch(`/api/regionais/${regionalId}`).then((res) => res.json()),
         fetch(`/api/centros?REGIONAL=${regionalId}`).then((res) => res.json()),
         fetch(summariesPath).then((res) => res.json()),
-        fetch(`/api/forms?_id=${cadastroInfo.formId}`).then((res) => res.json())
+        fetch(`/api/forms?_id=${cadastroInfo.formId}`).then((res) => res.json()),
+        fetch(`/api/pessoas`).then((res) => res.json())
       ])
 
       const coordenador = await fetch(`/api/pessoas/${regionalData.COORDENADOR_ID}`).then((res) => res.json())
@@ -91,12 +100,13 @@ export default function MainPage({params}:any) {
       let autoavaliacaoQuestion = avaliacaoCategory.QUESTIONS[0].GROUP[0];
       let questoes = coord_quiz.QUESTIONS[0].GROUP;
 
+      setCoordenadores(pessoasData);
+
       setAvaliacaoQuestion(autoavaliacaoQuestion)
       setCoordenadorQuestoes(questoes);
 
-      setCoordenador(coordenador.NOME);
+      setSelectedCoordenador(coordenador.NOME);
       setCentros(centrosData);
-
 
       const UniqueSummariesDataByCentroId = summariesData.reduce((acc: any, summary: any) => {
         if (!acc[summary.CENTRO_ID]) {
@@ -127,6 +137,26 @@ export default function MainPage({params}:any) {
     fetchData();
   },[regionalId])
 
+  async function UpdateCoordinator(nameCoordinator: string){
+    try {
+      let coordenador: Pessoa|undefined = coordenadores.find((coordenador: Pessoa) => coordenador.NOME === nameCoordinator);
+      const coordenadorId = coordenador?._id;
+
+      const response = await fetch(`/api/regionais/${regionalId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({COORDENADOR_ID: coordenadorId}),
+      });
+      const data = await response.json();
+      console.log("data", data)
+      setSelectedCoordenador(coordenador?.NOME);
+      
+    } catch (error) {
+      console.log("Erro ao atualizar coordenador", error)
+      throw new Error("Erro ao atualizar coordenador")
+    }
+  }
+
   return (
     <div>
       {loading ? (
@@ -142,8 +172,29 @@ export default function MainPage({params}:any) {
         </div>
       ) : (
         <>
-          <ValidacaoCoordenacao
-            coordenador={coordenador}
+           <ValidacaoCoordenacao
+            coordenador={
+              user?.role === "admin" ? (
+                  <Select
+                    value={selectedCoordenador}
+                    onValueChange={(newValue) => {
+                      console.log("newValue", newValue)
+                      UpdateCoordinator(newValue)
+                    }}
+                    disabled={false}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma opção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coordenadores.map((coordenador) => (
+                        <SelectItem key={coordenador._id} value={coordenador.NOME}>
+                          {coordenador.NOME}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>)
+        : (selectedCoordenador)}
             totalRespostas={totalRespostas}
             totalCentros={totalCentros}
             regionalId={regionalId}
