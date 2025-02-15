@@ -10,8 +10,6 @@ interface QuizProps {
 
 export function QuizComponent({ quiz, centroId, initialCache, onAnswerChange }: QuizProps) {
   
-  console.log("Quiz", quiz);
-  
   return (
     <div className="border p-4 rounded-md">
       <h2 className="text-xl font-semibold">{quiz.CATEGORY}</h2>
