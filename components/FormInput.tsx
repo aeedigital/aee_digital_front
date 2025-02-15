@@ -39,11 +39,15 @@ const FormInput: React.FC<FormInputType> = ({
   isRequired = false,
   answerType,
 }) => {
+
   const [value, setValue] = useState(initialValue);
-
+  
   const [isEmpty, setIsEmpty] = useState(isRequired && !initialValue);
-
-  const isValidDate = (date: any) => date instanceof Date;
+  
+  // const isValidDate = (date: any) => date instanceof Date;
+  const isValidDate = (date: any): boolean =>{
+    return date instanceof Date && !isNaN(date.getTime());
+  }
 
   useEffect(() => {
     setValue(initialValue);
@@ -158,7 +162,7 @@ const FormInput: React.FC<FormInputType> = ({
     <PopoverTrigger asChild>
       <Input
         type="text"
-        value={value && isValidDate(new Date(value)) ? format(new Date(value), "dd/MM/yyyy") : ""}
+        value={(value && isValidDate(new Date(value))) ? format(new Date(value), "dd/MM/yyyy") : ""}
         placeholder="Selecione uma data"
         readOnly
         disabled={isDisabled}
