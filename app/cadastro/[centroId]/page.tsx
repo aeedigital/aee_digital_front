@@ -6,24 +6,28 @@ import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
 import { CompletionNotification } from "@components/CompletionNotification";
 import { Answer, Page } from "@/interfaces/form.interface";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from 'next/navigation';
-
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function DynamicPage({ params }: any) {
   const { centroId } = params;
-
+  
   const searchParams = useSearchParams();
   const router = useRouter();
-    
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({});
-  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
   const [formId, setFormId] = useState<string>("");
 
-  // Fetch de dados baseado no summaryId ou centroId
+  // Obtém a página da URL e converte para número (default = 1)
+  const queryPage = parseInt(searchParams.get("page") || "1", 10) - 1;
+  const [currentPageIndex, setCurrentPageIndex] = useState<number>(Math.max(queryPage, 0));
+
+  // Atualiza a URL ao mudar de página
+  const updatePageInUrl = (pageIndex: number) => {
+    router.push(`?page=${pageIndex + 1}`, { scroll: false });
+  };
+
   useEffect(() => {
     let summaryId = searchParams.get("summaryId");
 
@@ -60,11 +64,21 @@ export default function DynamicPage({ params }: any) {
 
         const firstFormResponse = formResponse[0];
 
-        const formWithoutRolePages = firstFormResponse.PAGES.filter((page:Page) => page.ROLE !== "coord_regional");
+        const formWithoutRolePages = firstFormResponse.PAGES.filter(
+          (page: Page) => page.ROLE !== "coord_regional"
+        );
 
         setAnswersCache(cache);
         setPages(formWithoutRolePages);
         setFormId(firstFormResponse._id);
+
+        // Garante que a página inicial seja válida
+        if (queryPage >= formWithoutRolePages.length) {
+          setCurrentPageIndex(0);
+          updatePageInUrl(0);
+        } else {
+          setCurrentPageIndex(queryPage);
+        }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       } finally {
@@ -87,7 +101,10 @@ export default function DynamicPage({ params }: any) {
       }
 
       const existingAnswers = prev[questionId] || [];
+
       let updatedAnswers;
+
+      if(existingAnswers.length > 0){
 
       if (newAnswer === null && answerId !== null) {
         updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
@@ -100,21 +117,17 @@ export default function DynamicPage({ params }: any) {
       } else {
         return prev;
       }
+    }else{
+      updatedAnswers = [newAnswer];
+    }
 
       return { ...prev, [questionId]: updatedAnswers };
     });
   };
 
-  const handlePreviousPage = () => {
-    setCurrentPageIndex((prev) => Math.max(prev - 1, 0));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPageIndex((prev) => Math.min(prev + 1, pages.length));
-  };
-
-  const handleFormCompletion = () => {
-    router.push(`/cadastro/agradecimento`);
+  const handlePageChange = (pageIndex: number) => {
+    setCurrentPageIndex(pageIndex);
+    updatePageInUrl(pageIndex);
   };
 
   return (
@@ -151,7 +164,7 @@ export default function DynamicPage({ params }: any) {
               <div className="mt-6 flex flex-col items-center space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
                 <button
                   disabled={currentPageIndex === 0}
-                  onClick={handlePreviousPage}
+                  onClick={() => handlePageChange(currentPageIndex - 1)}
                   className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
                   Anterior
@@ -161,7 +174,7 @@ export default function DynamicPage({ params }: any) {
                   {pages.map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => setCurrentPageIndex(index)}
+                      onClick={() => handlePageChange(index)}
                       className={`px-4 py-2 rounded ${
                         currentPageIndex === index
                           ? "bg-blue-500 text-white"
@@ -174,8 +187,8 @@ export default function DynamicPage({ params }: any) {
                 </div>
 
                 <button
-                  disabled={currentPageIndex === pages.length}
-                  onClick={handleNextPage}
+                  disabled={currentPageIndex === pages.length - 1}
+                  onClick={() => handlePageChange(currentPageIndex + 1)}
                   className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
                   Próximo
@@ -190,8 +203,8 @@ export default function DynamicPage({ params }: any) {
               answersCache={answersCache}
               formId={formId}
               centroId={centroId}
-              onPrevious={handlePreviousPage}
-              onComplete={handleFormCompletion}
+              onPrevious={() => handlePageChange(currentPageIndex - 1)}
+              onComplete={() => router.push(`/cadastro/agradecimento`)}
             />
           )}
         </div>
