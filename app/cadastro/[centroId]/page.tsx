@@ -4,26 +4,30 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
-import { CompletionNotification } from "@components/CompletionNotification";
 import { Answer, Page } from "@/interfaces/form.interface";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from 'next/navigation';
-
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function DynamicPage({ params }: any) {
   const { centroId } = params;
-
+  
   const searchParams = useSearchParams();
   const router = useRouter();
-    
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({});
-  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
   const [formId, setFormId] = useState<string>("");
 
-  // Fetch de dados baseado no summaryId ou centroId
+  // Obtém a página da URL e converte para número (default = 1)
+  const queryPage = parseInt(searchParams.get("page") || "1", 10) - 1;
+  const totalPages = pages.length + 1; // Adiciona 1 para incluir a página de validação
+  const [currentPageIndex, setCurrentPageIndex] = useState<number>(Math.max(queryPage, 0));
+
+  // Atualiza a URL ao mudar de página
+  const updatePageInUrl = (pageIndex: number) => {
+    router.push(`?page=${pageIndex + 1}`, { scroll: false });
+  };
+
   useEffect(() => {
     let summaryId = searchParams.get("summaryId");
 
@@ -60,11 +64,21 @@ export default function DynamicPage({ params }: any) {
 
         const firstFormResponse = formResponse[0];
 
-        const formWithoutRolePages = firstFormResponse.PAGES.filter((page:Page) => page.ROLE !== "coord_regional");
+        const formWithoutRolePages = firstFormResponse.PAGES.filter(
+          (page: Page) => page.ROLE !== "coord_regional"
+        );
 
         setAnswersCache(cache);
         setPages(formWithoutRolePages);
         setFormId(firstFormResponse._id);
+
+        // Garante que a página inicial seja válida
+        if (queryPage >= totalPages) {
+          setCurrentPageIndex(0);
+          updatePageInUrl(0);
+        } else {
+          setCurrentPageIndex(queryPage);
+        }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       } finally {
@@ -89,32 +103,29 @@ export default function DynamicPage({ params }: any) {
       const existingAnswers = prev[questionId] || [];
       let updatedAnswers;
 
-      if (newAnswer === null && answerId !== null) {
-        updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
-      } else if (newAnswer && answerId) {
-        updatedAnswers = existingAnswers.map((answer) =>
-          answer._id === answerId ? newAnswer : answer
-        );
-      } else if (newAnswer && !answerId) {
-        updatedAnswers = [...existingAnswers, newAnswer];
+      if (existingAnswers.length > 0) {
+        if (newAnswer === null && answerId !== null) {
+          updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
+        } else if (newAnswer && answerId) {
+          updatedAnswers = existingAnswers.map((answer) =>
+            answer._id === answerId ? newAnswer : answer
+          );
+        } else if (newAnswer && !answerId) {
+          updatedAnswers = [...existingAnswers, newAnswer];
+        } else {
+          return prev;
+        }
       } else {
-        return prev;
+        updatedAnswers = [newAnswer];
       }
 
-      return { ...prev, [questionId]: updatedAnswers };
+      return { ...prev, [questionId]: updatedAnswers.filter((answer): answer is Answer => answer !== null) };
     });
   };
 
-  const handlePreviousPage = () => {
-    setCurrentPageIndex((prev) => Math.max(prev - 1, 0));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPageIndex((prev) => Math.min(prev + 1, pages.length));
-  };
-
-  const handleFormCompletion = () => {
-    router.push(`/cadastro/agradecimento`);
+  const handlePageChange = (pageIndex: number) => {
+    setCurrentPageIndex(pageIndex);
+    updatePageInUrl(pageIndex);
   };
 
   return (
@@ -134,7 +145,7 @@ export default function DynamicPage({ params }: any) {
         </div>
       ) : (
         <div>
-          {pages.length > 0 && currentPageIndex < pages.length && (
+          {currentPageIndex < pages.length ? (
             <div>
               <div className="space-y-4">
                 {pages[currentPageIndex].QUIZES.map((quiz, quizIndex) => (
@@ -151,17 +162,17 @@ export default function DynamicPage({ params }: any) {
               <div className="mt-6 flex flex-col items-center space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
                 <button
                   disabled={currentPageIndex === 0}
-                  onClick={handlePreviousPage}
+                  onClick={() => handlePageChange(currentPageIndex - 1)}
                   className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
                   Anterior
                 </button>
 
                 <div className="flex flex-wrap justify-center gap-2">
-                  {pages.map((_, index) => (
+                  {Array.from({ length: totalPages }).map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => setCurrentPageIndex(index)}
+                      onClick={() => handlePageChange(index)}
                       className={`px-4 py-2 rounded ${
                         currentPageIndex === index
                           ? "bg-blue-500 text-white"
@@ -174,24 +185,22 @@ export default function DynamicPage({ params }: any) {
                 </div>
 
                 <button
-                  disabled={currentPageIndex === pages.length}
-                  onClick={handleNextPage}
+                  disabled={currentPageIndex === totalPages - 1}
+                  onClick={() => handlePageChange(currentPageIndex + 1)}
                   className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
                   Próximo
                 </button>
               </div>
             </div>
-          )}
-
-          {currentPageIndex === pages.length && (
+          ) : (
             <ValidationTab
               questions={pages.flatMap((page) => page.QUIZES.flatMap((quiz) => quiz.QUESTIONS))}
               answersCache={answersCache}
               formId={formId}
               centroId={centroId}
-              onPrevious={handlePreviousPage}
-              onComplete={handleFormCompletion}
+              onPrevious={() => handlePageChange(currentPageIndex - 1)}
+              onComplete={() => router.push(`/cadastro/agradecimento`)}
             />
           )}
         </div>

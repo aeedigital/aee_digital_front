@@ -7,21 +7,21 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const path = url.pathname;
 
-    const userType = request.cookies.get('userType')?.value || request.headers.get('user-type');
+  const userType = request.cookies.get('userType')?.value || request.headers.get('user-type');
 
-console.log("userType",typeof userType, userType)
 
-if (userType && userType !== 'undefined' && userType !== 'null') {
-  console.log("path", path)
-      const hasAccess = canAccessPage(userType as 'coord_geral' | 'coord_regional' | 'presidente', path);
-      if (!hasAccess) {
-        url.pathname = '/login'; // Redireciona para login ou página de acesso negado
-        return NextResponse.redirect(url);
-      }
-    } else {
-      url.pathname = '/login'; // Redireciona se o usuário não estiver autenticado
+  if (userType && userType !== 'undefined' && userType !== 'null') {
+    console.log("path", path)
+    const hasAccess = canAccessPage(userType as 'coord_geral' | 'coord_regional' | 'presidente' | 'admin', path);
+
+    if (!hasAccess) {
+      url.pathname = '/login'; // Redireciona para login ou página de acesso negado
       return NextResponse.redirect(url);
     }
+  } else {
+    url.pathname = '/login'; // Redireciona se o usuário não estiver autenticado
+    return NextResponse.redirect(url);
+  }
 
   return NextResponse.next();
 }

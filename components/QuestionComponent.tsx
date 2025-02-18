@@ -62,9 +62,10 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
 
       setIsEmpty(IS_REQUIRED && (!value || value.trim() === ''));
 
+
       if (onAnswerChange) {
         const updatedAnswer: Answer = {
-          ...answer,
+          ...response,
           ANSWER: String(value),
         };
         onAnswerChange(question._id, response._id, updatedAnswer);
