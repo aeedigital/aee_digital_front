@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
-import { CompletionNotification } from "@components/CompletionNotification";
 import { Answer, Page } from "@/interfaces/form.interface";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -21,6 +20,7 @@ export default function DynamicPage({ params }: any) {
 
   // Obtém a página da URL e converte para número (default = 1)
   const queryPage = parseInt(searchParams.get("page") || "1", 10) - 1;
+  const totalPages = pages.length + 1; // Adiciona 1 para incluir a página de validação
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(Math.max(queryPage, 0));
 
   // Atualiza a URL ao mudar de página
@@ -73,7 +73,7 @@ export default function DynamicPage({ params }: any) {
         setFormId(firstFormResponse._id);
 
         // Garante que a página inicial seja válida
-        if (queryPage >= formWithoutRolePages.length) {
+        if (queryPage >= totalPages) {
           setCurrentPageIndex(0);
           updatePageInUrl(0);
         } else {
@@ -101,27 +101,25 @@ export default function DynamicPage({ params }: any) {
       }
 
       const existingAnswers = prev[questionId] || [];
-
       let updatedAnswers;
 
-      if(existingAnswers.length > 0){
-
-      if (newAnswer === null && answerId !== null) {
-        updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
-      } else if (newAnswer && answerId) {
-        updatedAnswers = existingAnswers.map((answer) =>
-          answer._id === answerId ? newAnswer : answer
-        );
-      } else if (newAnswer && !answerId) {
-        updatedAnswers = [...existingAnswers, newAnswer];
+      if (existingAnswers.length > 0) {
+        if (newAnswer === null && answerId !== null) {
+          updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
+        } else if (newAnswer && answerId) {
+          updatedAnswers = existingAnswers.map((answer) =>
+            answer._id === answerId ? newAnswer : answer
+          );
+        } else if (newAnswer && !answerId) {
+          updatedAnswers = [...existingAnswers, newAnswer];
+        } else {
+          return prev;
+        }
       } else {
-        return prev;
+        updatedAnswers = [newAnswer];
       }
-    }else{
-      updatedAnswers = [newAnswer];
-    }
 
-      return { ...prev, [questionId]: updatedAnswers };
+      return { ...prev, [questionId]: updatedAnswers.filter((answer): answer is Answer => answer !== null) };
     });
   };
 
@@ -147,7 +145,7 @@ export default function DynamicPage({ params }: any) {
         </div>
       ) : (
         <div>
-          {pages.length > 0 && currentPageIndex < pages.length && (
+          {currentPageIndex < pages.length ? (
             <div>
               <div className="space-y-4">
                 {pages[currentPageIndex].QUIZES.map((quiz, quizIndex) => (
@@ -171,7 +169,7 @@ export default function DynamicPage({ params }: any) {
                 </button>
 
                 <div className="flex flex-wrap justify-center gap-2">
-                  {pages.map((_, index) => (
+                  {Array.from({ length: totalPages }).map((_, index) => (
                     <button
                       key={index}
                       onClick={() => handlePageChange(index)}
@@ -187,7 +185,7 @@ export default function DynamicPage({ params }: any) {
                 </div>
 
                 <button
-                  disabled={currentPageIndex === pages.length - 1}
+                  disabled={currentPageIndex === totalPages - 1}
                   onClick={() => handlePageChange(currentPageIndex + 1)}
                   className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 w-full sm:w-auto"
                 >
@@ -195,9 +193,7 @@ export default function DynamicPage({ params }: any) {
                 </button>
               </div>
             </div>
-          )}
-
-          {currentPageIndex === pages.length && (
+          ) : (
             <ValidationTab
               questions={pages.flatMap((page) => page.QUIZES.flatMap((quiz) => quiz.QUESTIONS))}
               answersCache={answersCache}

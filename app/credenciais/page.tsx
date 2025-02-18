@@ -2,20 +2,20 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { FiRefreshCcw } from "react-icons/fi"; // Ícone de redefinição
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BotaoCopiar } from "@/components/BotaoCopiar";
 import { BarraDeCompartilhamento } from "@/components/BarraCompartilhamento";
-
-
 import { Centro, Regional } from "@/interfaces/centro.interface";
 import { Pass } from "@/interfaces/auth.interface";
+import { set } from "date-fns";
 
 interface LoginSenha {
   scopeInfo: Centro | Regional;
   scope: string;
   user: string;
   pass: string;
+  _id:string;
 }
 
 export default function CredenciaisPage() {
@@ -29,8 +29,8 @@ export default function CredenciaisPage() {
 // Componente que faz a busca e renderiza a tabela
 function CredenciaisContent() {
   const searchParams = useSearchParams();
-
   const [scopeInfo, setContextInfo] = useState<LoginSenha[]>([]);
+  const [isResetting, setIsResetting] = useState<string | null>(null);
 
   useEffect(() => {
     async function getPasses() {
@@ -49,6 +49,7 @@ function CredenciaisContent() {
           scopeInfo: centro,
           user: pass?.user,
           pass: pass?.pass,
+          _id: pass?._id,
         };
       });
 
@@ -75,12 +76,56 @@ function CredenciaisContent() {
     const scopeId = searchParams.get("scope_id");
     const scope = searchParams.get("scope");
 
+
     if (scope === "regional") {
       buscaCredenciaisDasRegionais();
     } else if (scopeId) {
       buscaCredenciaisDosCentros(scopeId);
     }
   }, [searchParams]);
+
+  async function handleResetPassword(info: LoginSenha) {
+    const { scopeInfo, _id, scope } = info;
+    const scopeId = (scopeInfo as any)?._id;
+
+    setIsResetting(scopeId);
+
+    console.log("INFO", info)
+
+    try {
+      const response = await fetch(`/api/reset-pass/${_id}?scope=${scope}&scope_id=${scopeId}`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao redefinir a senha.");
+      }
+
+      const updatedPass = await response.json();
+
+      const {newPassword, newUser} = updatedPass;
+
+      console.log("UPDATED PASS", updatedPass)
+
+      setContextInfo((prev) =>
+        prev.map((info) =>
+          (info.scopeInfo as any)?._id === scopeId
+            ? { ...info, pass: newPassword, user: newUser }
+            : info
+        )
+      );
+
+      alert("Senha redefinida com sucesso!");
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error?.message || "Erro ao redefinir a senha.");
+      } else {
+        alert("Erro ao redefinir a senha.");
+      }
+    } finally {
+      setIsResetting(null);
+    }
+  }
 
   return (
     <div className="flex justify-center items-center w-full px-4 md:px-8 py-4">
@@ -90,7 +135,6 @@ function CredenciaisContent() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Tabela responsiva com overflow-x-auto */}
           <div className="overflow-x-auto w-full">
             <table className="min-w-full border border-gray-200 text-sm md:text-base">
               <thead className="bg-gray-50">
@@ -123,8 +167,9 @@ function CredenciaisContent() {
                     <td className="p-2 md:p-4 border-b border-gray-200">
                       {info.pass}
                     </td>
-                    <td className="p-2 md:p-4 border-b border-gray-200">
-                      <BarraDeCompartilhamento  texto={`Olá! Seguem as credenciais para acesso:
+                    <td className="p-2 md:p-4 border-b border-gray-200 flex space-x-2 items-center">
+                      <BarraDeCompartilhamento
+                        texto={`Olá! Seguem as credenciais para acesso:
 
     O site que tem que acessar é o seguinte : http://162.214.123.133:3000/
 
@@ -136,6 +181,17 @@ function CredenciaisContent() {
     Use-as com cuidado e não compartilhe com terceiros sem autorização.
     Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`}
                       />
+                      <button
+                        className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 transition-all"
+                        disabled={isResetting === (info.scopeInfo as any)?._id}
+                        onClick={() => handleResetPassword(info)}
+                      >
+                        <FiRefreshCcw
+                          className={`w-5 h-5 ${
+                            isResetting === (info.scopeInfo as any)?._id ? "animate-spin" : ""
+                          }`}
+                        />
+                      </button>
                     </td>
                   </tr>
                 ))}

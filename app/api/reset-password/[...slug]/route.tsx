@@ -1,8 +1,6 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import generator from "generate-password";
 import { NextRequest, NextResponse } from 'next/server';
 import { buildApiUrl } from "@/app/helpers/buildApiUrl";
-
+import { createRandomPass } from '@/app/helpers/createRandonPass';
 
 export async function POST(req: NextRequest, { params }: { params: { slug: string[] } }) {
     const apiUrl = buildApiUrl(req, [`passes/${params.slug[0]}`]);
@@ -19,12 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     
       try {
         // Gerando a senha com a biblioteca generate-password
-        const newPassword = generator.generate({
-          length: 6, // Define o tamanho da senha
-          numbers: true, // Inclui números
-          uppercase: false, // Define se quer letras maiúsculas
-          excludeSimilarCharacters: true, // Evita caracteres parecidos (1 e l, 0 e O)
-        });
+        const newPassword = createRandomPass(6);
     
         // Simulação de atualização no banco de dados (substituir pelo seu código real)
         console.log("Nova senha gerada:", newPassword);

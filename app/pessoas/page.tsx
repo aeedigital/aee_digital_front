@@ -11,11 +11,11 @@ import { Pessoa } from '@/interfaces/pessoas.interface';
 const API_URL = '/api/pessoas';
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = useState([]);
-  const [filteredContacts, setFilteredContacts] = useState([]);
+  const [contacts, setContacts] = useState<Pessoa[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<Pessoa[]>([]);
   const [filter, setFilter] = useState('');
   const [open, setOpen] = useState(false);
-  const [currentContact, setCurrentContact] = useState(null);
+  const [currentContact, setCurrentContact] = useState<Pessoa | null>(null);
 
   useEffect(() => {
     fetch(API_URL)
@@ -29,13 +29,13 @@ export default function ContactsPage() {
 
   useEffect(() => {
     setFilteredContacts(
-      contacts.filter(contact => contact?.NOME?.toLowerCase().includes(filter.toLowerCase()))
+      contacts.filter((contact) => contact?.NOME?.toLowerCase().includes(filter.toLowerCase()))
     );
   }, [filter, contacts]);
 
   const handleSave = async () => {
       console.log("currentContact", currentContact);
-    if (currentContact._id) {
+    if (currentContact && currentContact._id) {
       await fetch(`${API_URL}/${currentContact._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -43,8 +43,6 @@ export default function ContactsPage() {
       });
       setContacts(contacts.map((c) => (c._id === currentContact._id ? currentContact : c)));
     } else {
-
-
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +60,7 @@ export default function ContactsPage() {
     { accessorKey: 'NOME', header: 'Nome' },
     { accessorKey: 'E-MAIL', header: 'Email' },
     { accessorKey: 'CELULAR', header: 'Celular' },
-    { accessorKey: 'actions', header: 'Ações', cell: ({ row }) => (
+    { accessorKey: 'actions', header: 'Ações', cell: ({ row }: { row: any }) => (
         <Button size="sm" onClick={() => { setCurrentContact(row.original); setOpen(true); }}>Editar</Button>
       )
     }
@@ -83,7 +81,7 @@ export default function ContactsPage() {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <Button onClick={() => { setCurrentContact({ NOME: '', 'E-MAIL': '', CELULAR: '' }); setOpen(true); }}>Adicionar Contato</Button>
+        <Button onClick={() => { setCurrentContact({ _id: '', NOME: '', 'E-MAIL': '', CELULAR: '' }); setOpen(true); }}>Adicionar Contato</Button>
       </div>
       <Table className="mt-4">
         <TableHeader>
@@ -112,9 +110,9 @@ export default function ContactsPage() {
             <DialogHeader>
               <DialogTitle>{currentContact?._id ? 'Editar Contato' : 'Adicionar Contato'}</DialogTitle>
             </DialogHeader>
-            <Input placeholder="Nome" value={currentContact.NOME} onChange={(e) => setCurrentContact({ ...currentContact, NOME: e.target.value })} />
-            <Input placeholder="Email" value={currentContact['E-MAIL']} onChange={(e) => setCurrentContact({ ...currentContact, 'E-MAIL': e.target.value })} />
-            <Input placeholder="Celular" value={currentContact.CELULAR} onChange={(e) => setCurrentContact({ ...currentContact, CELULAR: e.target.value })} />
+            <Input placeholder="Nome" value={currentContact?.NOME || ''} onChange={(e) => setCurrentContact({ ...currentContact, NOME: e.target.value, 'E-MAIL': currentContact?.['E-MAIL'] || '', CELULAR: currentContact?.CELULAR || '', _id: currentContact?._id || '' })} />
+            <Input placeholder="Email" value={currentContact?.['E-MAIL'] || ''} onChange={(e) => setCurrentContact({ ...currentContact, 'E-MAIL': e.target.value, NOME: currentContact?.NOME || '', CELULAR: currentContact?.CELULAR || '', _id: currentContact?._id || '' })} />
+            <Input placeholder="Celular" value={currentContact?.CELULAR || ''} onChange={(e) => setCurrentContact({ ...currentContact, CELULAR: e.target.value, NOME: currentContact?.NOME || '', 'E-MAIL': currentContact?.['E-MAIL'] || '', _id: currentContact?._id || '' })} />
             <Button onClick={handleSave}>Salvar</Button>
           </DialogContent>
         </Dialog>

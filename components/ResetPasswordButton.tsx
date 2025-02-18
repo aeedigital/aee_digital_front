@@ -5,14 +5,16 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { User } from "@/context/UserContext";
 
-import { useUser } from "@/context/UserContext";
+interface ResetPasswordButtonProps {
+  callback?: (userData: { _id: string; user: string; pass: string; role: string; scope: string| undefined }) => void;
+  user: User;
+}
 
+export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
 
-export default function ResetPasswordButton() {
-
-  const { user } = useUser();
-  const { setUser } = useUser();
+  const {user, callback} = props;
 
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -45,13 +47,15 @@ export default function ResetPasswordButton() {
       setTimeout(() => setIsDialogOpen(true), 100);
 
       if (user) {
-        setUser({
-          _id: user?._id,
-          user: user?.user,
-          pass: data.newPassword,
-          role: user?.role,
-          scope: user?.scope,
-        });
+        if (callback) {
+          callback({
+            _id: user?._id,
+            user: user?.user,
+            pass: data.newPassword,
+            role: user?.role,
+            scope: user?.scope,
+          });
+        }
       }
 
 

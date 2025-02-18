@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface ValidacaoCoordenacaoProps {
-  coordenador: string | React.JSX.Element;
+  coordenador: string | React.JSX.Element | undefined;
   totalRespostas: number;
   totalCentros: number;
   regionalId: string;

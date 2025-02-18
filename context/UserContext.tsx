@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 // Definição do tipo para o usuário
-interface User {
+export interface User {
   _id: string;
   user: string;
   pass: string;

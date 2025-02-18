@@ -13,6 +13,10 @@ import { Pessoa } from '@/interfaces/pessoas.interface';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/context/UserContext";
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import CentroDialog from '@/components/CreateCentro';
 
 const SkeletonCard = () => (
   <div style={{ width: "300px", height: "200px", margin: "10px", background: "#e0e0e0", borderRadius: "8px", animation: "pulse 1.5s infinite" }} />
@@ -24,9 +28,9 @@ export default function MainPage({params}:any) {
   const { user } = useUser();
 
   const [loading, setLoading] = useState(true); // Estado para controlar o carregamento
-  const [centros, setCentros] = useState([]);
+  const [centros, setCentros] = useState<Centro[]>([]);
   const [coordenadores, setCoordenadores] = useState<Pessoa[]>([]);
-  const [selectedCoordenador, setSelectedCoordenador] = useState("");
+  const [selectedCoordenador, setSelectedCoordenador] = useState<string | undefined>("");
 
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
@@ -48,6 +52,12 @@ export default function MainPage({params}:any) {
   PRESET_VALUES: []
   }])
   const [formulario, setFormulario] = useState({})
+
+  const [openDialog, setOpenDialog] = useState(false);
+  const [novoCentro, setNovoCentro] = useState({
+    NOME_CENTRO: "",
+    NOME_CURTO: "",
+  });
 
   function findQuestionByCategory(form: any, category: string) {
 
@@ -137,6 +147,12 @@ export default function MainPage({params}:any) {
     fetchData();
   },[regionalId])
 
+
+  function handleCentroCreated(newCentro: Centro) {
+    setCentros([...centros, newCentro]);
+    setTotalCentros(prev => prev + 1);
+  }
+
   async function UpdateCoordinator(nameCoordinator: string){
     try {
       let coordenador: Pessoa|undefined = coordenadores.find((coordenador: Pessoa) => coordenador.NOME === nameCoordinator);
@@ -200,6 +216,11 @@ export default function MainPage({params}:any) {
             regionalId={regionalId}
           />
 
+            {user?.role === "admin" && (
+              <div className="mb-4">
+                <CentroDialog regionalId={regionalId} onCentroCreated={handleCentroCreated} />
+              </div>
+            )}
           <div style={{ display: "flex", flexWrap: "wrap" }}>
             {centros.map((centro: Centro) => (
               <House_Card
