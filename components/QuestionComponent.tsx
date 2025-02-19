@@ -27,9 +27,9 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
 
       if (questionValue._id) {
         response = await fetch(
-          `/api/answers?questionId=${questionId}&centroId=${centroId}&answerId=${questionValue._id}`,
+          `/api/answers/${questionValue._id}`,
           {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
             },
