@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
-import { AiOutlineHistory } from "react-icons/ai"; // Importa o ícone desejado
+import { AiOutlineHistory } from "react-icons/ai";
 
 import { Quiz, Question, Answer, Summary } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
@@ -13,7 +12,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 import FormInput from './FormInput';
 import { QuestionComponent } from './QuestionComponent';
@@ -32,38 +31,26 @@ interface QuestionAnswer {
   answer?: Answer;
 }
 
-const House_Card: React.FC<CardProps> = ({ 
-  centro, 
-  avaliacao_question, 
-  coordenador_questions, 
+const House_Card: React.FC<CardProps> = ({
+  centro,
+  avaliacao_question,
+  coordenador_questions,
   form,
   summaries
 }) => {
 
-
   const router = useRouter();
 
-  // Estado que armazena TODAS as respostas do centro
   const [allAnswers, setAllAnswers] = useState<Answer[]>([]);
-
-  // Situação obtida pela question de avaliação
   const [situacao, setSituacao] = useState<string>('');
-
-  // Armazena o par (question, answer) para as questões do coordenador
   const [questoesCoordenador, setQuestoesCoordenador] = useState<QuestionAnswer[]>([]);
-
-  // Lista de perguntas obrigatórias não respondidas
   const [perguntasFaltantes, setPerguntasFaltantes] = useState<string[]>([]);
 
-  /**
-   * 1. Faz apenas UMA requisição para buscar todas as respostas do centro
-   */
+  // 1. Busca todas as respostas do centro
   useEffect(() => {
     async function fetchAllAnswers() {
       try {
-
-        let path = `/api/answers?CENTRO_ID=${centro._id}`
-
+        let path = `/api/answers?CENTRO_ID=${centro._id}`;
         const res = await fetch(path);
         const data = await res.json();
         setAllAnswers(data);
@@ -77,11 +64,7 @@ const House_Card: React.FC<CardProps> = ({
     }
   }, [centro?._id]);
 
-  /**
-   * 2. Assim que tivermos todas as respostas (`allAnswers`), 
-   *    definimos a situação (campo `situacao`) e populamos as 
-   *    questões do coordenador.
-   */
+  // 2. Assim que tivermos todas as respostas, define situacao e preenche questões do coordenador
   useEffect(() => {
     if (!allAnswers || allAnswers.length === 0) return;
 
@@ -93,22 +76,17 @@ const House_Card: React.FC<CardProps> = ({
 
     // B) Preenche questoesCoordenador
     const coordenadorQAs = coordenador_questions.map((question) => {
-      const answer = allAnswers.find(
-        (ans) => ans.QUESTION_ID === question._id
-      );
+      const answer = allAnswers.find((ans) => ans.QUESTION_ID === question._id);
       return { question, answer };
     });
     setQuestoesCoordenador(coordenadorQAs);
   }, [allAnswers, avaliacao_question, coordenador_questions]);
 
-  /**
-   * 3. Verifica quais perguntas obrigatórias não foram respondidas
-   */
+  // 3. Verifica quais perguntas obrigatórias não foram respondidas
   useEffect(() => {
     if (!allAnswers || allAnswers.length === 0) return;
     if (!form) return;
 
-    // Extrai todas as perguntas obrigatórias do form
     const requiredQuestions: Question[] = [];
     form.PAGES.forEach((quiz: { QUIZES: Quiz[] }) => {
       quiz.QUIZES.forEach((group) => {
@@ -122,26 +100,16 @@ const House_Card: React.FC<CardProps> = ({
       });
     });
 
-    // Filtra as obrigatórias que NÃO têm resposta ou cujo conteúdo está vazio
     const notAnswered = requiredQuestions.filter((rq) => {
-      // Procura a resposta correspondente na lista "allAnswers"
-      const resp = allAnswers
-        .filter((a) => a.QUESTION_ID === rq._id)
-        .pop(); // pega a última resposta encontrada (se houver)
-
-      // Se não existir resposta ou estiver vazia, então é "not answered"
+      const resp = allAnswers.filter((a) => a.QUESTION_ID === rq._id).pop();
       return !resp || !resp.ANSWER?.trim();
     });
 
-    // Mapeia para o texto da pergunta (ou outro campo)
     setPerguntasFaltantes(notAnswered.map((q) => q.QUESTION));
   }, [allAnswers, form]);
 
-  /**
-   * Cálculo de cor do card de acordo com a porcentagem de questões do coordenador respondidas
-   */
+  // Define a cor do Card com base no percentual de questões do coordenador
   const getBackgroundColor = () => {
-    // Se não tiver nenhuma questão do coordenador, retorna cor neutra
     if (!questoesCoordenador || questoesCoordenador.length === 0) {
       return 'bg-white';
     }
@@ -157,10 +125,9 @@ const House_Card: React.FC<CardProps> = ({
 
     const percentage = (answered / questions) * 100;
 
-    if(summaries?.length === 0 || !summaries){
+    if(!summaries || summaries.length === 0){
       return 'bg-red-200';
-    }
-    else{
+    } else {
       if (percentage === 0) {
         return 'bg-red-200';
       }
@@ -174,9 +141,6 @@ const House_Card: React.FC<CardProps> = ({
     }
   };
 
-  /**
-   * Navega para a rota cadastro com o ID do centro
-   */
   const handleCardClick = () => {
     router.push(`/cadastro/${centro._id}`);
   };
@@ -185,10 +149,6 @@ const House_Card: React.FC<CardProps> = ({
     router.push(`/cadastro/historico/${centro._id}`);
   };
 
-  /**
-   * Callback para atualizar uma resposta pontual no estado local
-   * (caso você precise refletir a mudança localmente sem bater na API toda hora).
-   */
   const handleAnswerChange = (
     questionId: string,
     answerId: string | null,
@@ -204,16 +164,13 @@ const House_Card: React.FC<CardProps> = ({
     );
   };
 
-  /**
-   * Se quiser manipular o input localmente
-   */
   const onInputChange = () => {
     // ...
   };
 
   return (
     <Card
-      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg ${getBackgroundColor()} p-4`}
+      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg p-4 ${getBackgroundColor()}`}
     >
       <CardHeader>
         <CardTitle>{centro.NOME_CENTRO}</CardTitle>
@@ -223,8 +180,9 @@ const House_Card: React.FC<CardProps> = ({
       </CardHeader>
 
       <CardContent>
-        <div>
-          Avaliação:
+        {/* Aqui, envolvemos o input em um contêiner com fundo branco para não "herdar" a cor do Card */}
+        <div className=" p-2 rounded">
+          <p className="font-semibold mb-1">Avaliação:</p>
           <FormInput
             type="text"
             isDisabled
@@ -235,11 +193,20 @@ const House_Card: React.FC<CardProps> = ({
           />
         </div>
 
+        {/* Fazemos o mesmo para as questões do coordenador */}
         {questoesCoordenador.map((questionAnswered, index) => (
-          <div key={index}>
+          <div key={index} className=" p-2 mt-2 rounded">
             <QuestionComponent
               centroId={centro._id}
-              answer={questionAnswered.answer || { _id: '', QUESTION_ID: '', ANSWER: '', CENTRO_ID: '', QUIZ_ID: '' }}
+              answer={
+                questionAnswered.answer || {
+                  _id: '',
+                  QUESTION_ID: '',
+                  ANSWER: '',
+                  CENTRO_ID: '',
+                  QUIZ_ID: ''
+                }
+              }
               question={questionAnswered.question}
               questionIndex={index}
               onAnswerChange={handleAnswerChange}
@@ -247,15 +214,13 @@ const House_Card: React.FC<CardProps> = ({
           </div>
         ))}
 
-        <p>Perguntas Faltantes: {perguntasFaltantes.length}</p>
+        <p className="mt-2 text-sm">Perguntas Faltantes: {perguntasFaltantes.length}</p>
       </CardContent>
 
       <CardFooter >
-        <p className="text-xs cursor-pointer" onClick={handleCardClick}>
+        <p className="text-xs cursor-pointer mr-2" onClick={handleCardClick}>
           Clique para ver as respostas
         </p>
-
-        {/* Ícone que redireciona para a página de histórico */}
         <AiOutlineHistory
           className="text-lg cursor-pointer text-blue-500 hover:text-blue-700"
           onClick={handleHistoryClick}

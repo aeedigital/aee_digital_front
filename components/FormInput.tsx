@@ -96,7 +96,7 @@ const FormInput: React.FC<FormInputType> = ({
   const inputStyles = isEmpty ? { borderColor: "red", borderWidth: "1px" } : {};
 
   return (
-    <div className="space-y-2">
+    <div className="bg-white space-y-2">
       {inputType === "select" && (
         <Select
           value={value}
