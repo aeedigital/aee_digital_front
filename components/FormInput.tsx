@@ -27,6 +27,7 @@ interface FormInputType {
   isDisabled?: boolean;
   isRequired?: boolean;
   answerType?: string;
+  placeholder?: string;
 }
 
 const FormInput: React.FC<FormInputType> = ({
@@ -37,8 +38,10 @@ const FormInput: React.FC<FormInputType> = ({
   options = [],
   isDisabled = false,
   isRequired = false,
+  placeholder,
   answerType,
 }) => {
+
 
   const [value, setValue] = useState(initialValue);
   
@@ -203,7 +206,7 @@ const FormInput: React.FC<FormInputType> = ({
           value={value}
           onChange={(e) => setValue(e.target.value)} // Atualiza localmente ao digitar
           onBlur={handleBlur} // Chama a API ao perder o foco
-          placeholder="Digite algo"
+          placeholder= {"Não respondido"} 
           disabled={isDisabled}
           style={inputStyles}
         />

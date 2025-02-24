@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import House_Card from '@/components/House_Card';
-import { Question} from '@/interfaces/form.interface'
+import { Question, Summary} from '@/interfaces/form.interface'
 import ValidacaoCoordenacao from '@/components/ValidacaoCoordenacao';
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import { appendDatePeriod, Period } from '@/app/helpers/datePeriodHelper';
@@ -13,9 +13,7 @@ import { Pessoa } from '@/interfaces/pessoas.interface';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/context/UserContext";
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import CentroDialog from '@/components/CreateCentro';
 
 const SkeletonCard = () => (
@@ -118,21 +116,23 @@ export default function MainPage({params}:any) {
       setSelectedCoordenador(coordenador.NOME);
       setCentros(centrosData);
 
+      summariesData.sort((a: any, b: any) => {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
       const UniqueSummariesDataByCentroId = summariesData.reduce((acc: any, summary: any) => {
         if (!acc[summary.CENTRO_ID]) {
           acc[summary.CENTRO_ID] = summary;
         }
         return acc;
-      }
-      , {});
+      }, {});
 
-
-      const summaries: { [key: string]: any[] } = {}
+      const summaries: { [key: string]: any[] } = {};
       for (const summary of summariesData) {
-        if(!summaries[summary.CENTRO_ID]){
-          summaries[summary.CENTRO_ID] = []
+        if (!summaries[summary.CENTRO_ID]) {
+          summaries[summary.CENTRO_ID] = [];
         }
-        summaries[summary.CENTRO_ID].push(summary)
+        summaries[summary.CENTRO_ID].push(summary);
       }
 
       setSummaryByCentroId(summaries);
