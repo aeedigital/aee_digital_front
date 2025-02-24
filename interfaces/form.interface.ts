@@ -52,4 +52,10 @@ export interface Summary {
   QUESTIONS: SummaryResponse[];
   createdAt: string;
   updatedAt: string;
+  validatedByCoordAt?: string;
+}
+
+export interface QuestionAnswer {
+  question: Question;
+  answer?: Answer;
 }

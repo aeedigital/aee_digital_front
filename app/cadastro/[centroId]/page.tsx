@@ -14,6 +14,8 @@ export default function DynamicPage({ params }: any) {
   const router = useRouter();
 
   const [pages, setPages] = useState<Page[]>([]);
+  const [allPages, setAllPages] = useState<Page[]>([]);
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [answersCache, setAnswersCache] = useState<Record<string, Answer[]>>({});
   const [formId, setFormId] = useState<string>("");
@@ -69,6 +71,7 @@ export default function DynamicPage({ params }: any) {
         );
 
         setAnswersCache(cache);
+        setAllPages(firstFormResponse.PAGES);
         setPages(formWithoutRolePages);
         setFormId(firstFormResponse._id);
 
@@ -195,7 +198,7 @@ export default function DynamicPage({ params }: any) {
             </div>
           ) : (
             <ValidationTab
-              questions={pages.flatMap((page) => page.QUIZES.flatMap((quiz) => quiz.QUESTIONS))}
+              questions={allPages.flatMap((page) => page.QUIZES.flatMap((quiz) => quiz.QUESTIONS))}
               answersCache={answersCache}
               formId={formId}
               centroId={centroId}

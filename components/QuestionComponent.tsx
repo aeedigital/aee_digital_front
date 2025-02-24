@@ -7,10 +7,11 @@ interface QuestionProps {
   centroId: string;
   questionIndex: number | string;
   answer: Answer;
+  placeholder?: string;
   onAnswerChange?: (questionId: string, answerId: string | null, newAnswer: Answer) => void;
 }
 
-export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange }: QuestionProps) {
+export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange, placeholder }: QuestionProps) {
   const [questionValue, setQuestionValue] = useState<Answer>(answer);
   const [isEmpty, setIsEmpty] = useState<boolean>(false);
 
@@ -60,8 +61,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
         return prevValue;
       });
 
-      setIsEmpty(IS_REQUIRED && (!value || value.trim() === ''));
-
+      setIsEmpty(IS_REQUIRED && (!value || (typeof value === 'string' && value.trim() === '')));
 
       if (onAnswerChange) {
         const updatedAnswer: Answer = {
@@ -89,6 +89,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
         isDisabled={false}
         isRequired={IS_REQUIRED}
         answerType={question.ANSWER_TYPE}
+        placeholder={placeholder}
       />
       {isEmpty && <p className="text-red-500 text-sm">Este campo é obrigatório.</p>}
     </div>

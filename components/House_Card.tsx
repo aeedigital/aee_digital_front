@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AiOutlineHistory } from "react-icons/ai";
 
-import { Quiz, Question, Answer, Summary } from '@/interfaces/form.interface';
+import { Quiz, Question, Answer, Summary, QuestionAnswer } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
 import { Centro } from '@/interfaces/centro.interface';
 
@@ -16,6 +16,7 @@ import {
 
 import FormInput from './FormInput';
 import { QuestionComponent } from './QuestionComponent';
+import {AcoesCoordenadorCentro} from '@components/AcoesCoordenadorCentro';
 
 interface CardProps {
   centro: Centro;
@@ -24,11 +25,6 @@ interface CardProps {
   required_questions?: string[];
   form: any;
   summaries: Summary[];
-}
-
-interface QuestionAnswer {
-  question: Question;
-  answer?: Answer;
 }
 
 const House_Card: React.FC<CardProps> = ({
@@ -45,6 +41,8 @@ const House_Card: React.FC<CardProps> = ({
   const [situacao, setSituacao] = useState<string>('');
   const [questoesCoordenador, setQuestoesCoordenador] = useState<QuestionAnswer[]>([]);
   const [perguntasFaltantes, setPerguntasFaltantes] = useState<string[]>([]);
+  const [backgroundColor, setBackgroundColor] = useState<string>('bg-white');
+  const [notMetCriterias, setNotMetCriterias] = useState<string[]>([]);
 
   // 1. Busca todas as respostas do centro
   useEffect(() => {
@@ -66,7 +64,6 @@ const House_Card: React.FC<CardProps> = ({
 
   // 2. Assim que tivermos todas as respostas, define situacao e preenche questões do coordenador
   useEffect(() => {
-    if (!allAnswers || allAnswers.length === 0) return;
 
     // A) Define a situacao
     const answerAvaliacao = allAnswers.find(
@@ -79,6 +76,7 @@ const House_Card: React.FC<CardProps> = ({
       const answer = allAnswers.find((ans) => ans.QUESTION_ID === question._id);
       return { question, answer };
     });
+
     setQuestoesCoordenador(coordenadorQAs);
   }, [allAnswers, avaliacao_question, coordenador_questions]);
 
@@ -125,21 +123,67 @@ const House_Card: React.FC<CardProps> = ({
 
     const percentage = (answered / questions) * 100;
 
-    if(!summaries || summaries.length === 0){
-      return 'bg-red-200';
-    } else {
-      if (percentage === 0) {
-        return 'bg-red-200';
-      }
-      if (percentage < 50 ) {
-        return 'bg-red-200';
-      } else if (percentage < 100) {
-        return 'bg-yellow-200';
-      } else {
-        return 'bg-green-200'; // 100% respondidas
+    const criteria:any[] = []
+
+    const finalizouCriteria = {
+      name: "Presidente finalizar a avaliação",
+      method : () => {
+        return summaries && summaries.length > 0;
       }
     }
+
+    const coordResponseCriteria = {
+      name: "Coordenador responder as perguntas",
+      method : () => {
+        return percentage === 100;
+      }
+    }
+
+    const analysisCriteria = {
+      name: "Coordenador finalizar análise",
+      method : () => {
+        console.log("FINALIZOU", centro.NOME_CURTO, summaries)
+        if(!summaries || summaries.length === 0){
+          return false;
+        }
+        const lastSummary = summaries[0];
+        return "validatedByCoordAt" in lastSummary;;
+      }
+    }
+
+    criteria.push(finalizouCriteria)
+    criteria.push(coordResponseCriteria)
+    criteria.push(analysisCriteria)
+
+
+    let criteriasMet = [];
+    let notMetCriterias = [];
+
+    for (let i = 0; i < criteria.length; i++) {
+      if(criteria[i].method()){
+        criteriasMet.push(criteria[i].name)
+      }else{
+        notMetCriterias.push(criteria[i].name)
+      }
+    }
+
+    setNotMetCriterias(notMetCriterias)
+
+    console.log("CRITERIAS MET", centro.NOME_CURTO, criteriasMet)
+
+    if(criteriasMet.length === criteria.length){
+      return 'bg-green-200';
+    }else if(criteriasMet.length > 0){
+      return 'bg-yellow-200';
+    }else{
+      return 'bg-red-200';
+    }
+ 
   };
+
+  useEffect(() => {
+    setBackgroundColor(getBackgroundColor());
+  }, [questoesCoordenador, summaries]);
 
   const handleCardClick = () => {
     router.push(`/cadastro/${centro._id}`);
@@ -154,14 +198,32 @@ const House_Card: React.FC<CardProps> = ({
     answerId: string | null,
     newAnswer: Answer
   ) => {
-    setQuestoesCoordenador((prev) =>
-      prev.map((qa) => {
-        if (qa.answer?._id === answerId) {
-          return { ...qa, answer: newAnswer };
+      setQuestoesCoordenador((prev) => {
+        const existingAnswers = prev.find((qa) => qa.question._id === questionId && qa.answer?._id === answerId);
+
+        if (existingAnswers) {
+          return prev.map((qa) => {
+            if (qa.answer?._id === answerId) {
+              return { ...qa, answer: newAnswer };
+            }
+            return qa;
+          })
         }
-        return qa;
-      })
-    );
+        else{
+
+          const questionToChange = prev.find((qa) => qa.question._id === questionId);
+          if (!questionToChange) {
+            console.warn('Questão não encontrada');
+            return prev;
+          }else{
+            questionToChange.answer = newAnswer;
+          }
+        }
+        return prev;
+        
+      }
+      );
+   
   };
 
   const onInputChange = () => {
@@ -170,7 +232,7 @@ const House_Card: React.FC<CardProps> = ({
 
   return (
     <Card
-      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg p-4 ${getBackgroundColor()}`}
+      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg p-4 ${backgroundColor}`}
     >
       <CardHeader>
         <CardTitle>{centro.NOME_CENTRO}</CardTitle>
@@ -207,6 +269,7 @@ const House_Card: React.FC<CardProps> = ({
                   QUIZ_ID: ''
                 }
               }
+              placeholder="Não respondido"
               question={questionAnswered.question}
               questionIndex={index}
               onAnswerChange={handleAnswerChange}
@@ -217,15 +280,37 @@ const House_Card: React.FC<CardProps> = ({
         <p className="mt-2 text-sm">Perguntas Faltantes: {perguntasFaltantes.length}</p>
       </CardContent>
 
-      <CardFooter >
-        <p className="text-xs cursor-pointer mr-2" onClick={handleCardClick}>
-          Clique para ver as respostas
-        </p>
-        <AiOutlineHistory
-          className="text-lg cursor-pointer text-blue-500 hover:text-blue-700"
-          onClick={handleHistoryClick}
-        />
-      </CardFooter>
+      {/* Nova seção de pendências com estilo aprimorado */}
+<div className="mt-4 p-3 bg-gray-100 rounded-lg shadow-inner">
+  <h3 className="text-lg font-semibold mb-2 text-gray-700">Pendências</h3>
+
+  {notMetCriterias.length === 0 ? (
+    <div className="flex items-center text-green-600">
+      ✅ <span className="ml-2">Sem pendências! Tudo está completo.</span>
+    </div>
+  ) : (
+    <ul className="list-none space-y-2">
+      {notMetCriterias.map((criteria, index) => (
+        <li key={index} className="flex items-center bg-red-100 p-2 rounded-md shadow-sm">
+          <span className="text-red-500 text-lg mr-2">⚠️</span>
+          <span className="text-red-700 font-medium">{criteria}</span>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
+      <AcoesCoordenadorCentro
+        centroId={centro._id}
+        coordQuestionsAnswered={questoesCoordenador}
+        onVerRespostas={handleCardClick}
+        onVerHistorico={handleHistoryClick}
+        onFinalizarAnalise={(status:boolean) => {
+          console.log("FINALIZOU", centro.NOME_CURTO, status)
+          setBackgroundColor(getBackgroundColor())}}
+        hasSummary={summaries && summaries.length > 0}
+      />
+ 
     </Card>
   );
 };
