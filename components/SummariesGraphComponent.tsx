@@ -98,7 +98,7 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
   const fetchData = async () => {
     try {
       const summariesPath = `/api/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt&dateFrom=${startDate}&dateTo=${endDate}`;
-      const centrosPath = `/api/centros`;
+      const centrosPath = `/api/centros?STATUS=Pendente,Integrada,Inscrita`;
 
       const [summaries, centros]: [Summary[], Centro[]] = await Promise.all([
         fetch(summariesPath).then(res => res.json()),

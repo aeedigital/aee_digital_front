@@ -13,7 +13,6 @@ import { Pessoa } from '@/interfaces/pessoas.interface';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/context/UserContext";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CentroDialog from '@/components/CreateCentro';
 
 const SkeletonCard = () => (
@@ -90,7 +89,7 @@ export default function MainPage({params}:any) {
 
       let [regionalData, centrosData, summariesData, formData, pessoasData] = await Promise.all([
         fetch(`/api/regionais/${regionalId}`).then((res) => res.json()),
-        fetch(`/api/centros?REGIONAL=${regionalId}`).then((res) => res.json()),
+        fetch(`/api/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`).then((res) => res.json()),
         fetch(summariesPath).then((res) => res.json()),
         fetch(`/api/forms?_id=${cadastroInfo.formId}`).then((res) => res.json()),
         fetch(`/api/pessoas`).then((res) => res.json())
