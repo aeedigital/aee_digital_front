@@ -45,7 +45,7 @@ function CredenciaisContent() {
       const info = centros.map((centro: Centro) => {
         const pass = passes.find((p: Pass) => p.scope_id === centro._id);
         return {
-          scope: "centro",
+          scope: "centros",
           scopeInfo: centro,
           user: pass?.user,
           pass: pass?.pass,
@@ -63,7 +63,7 @@ function CredenciaisContent() {
       const info = regionais.map((regional: Regional) => {
         const pass = passes.find((p: Pass) => p.scope_id === regional._id);
         return {
-          scope: "regional",
+          scope: "regionais",
           scopeInfo: regional,
           user: pass?.user,
           pass: pass?.pass,
@@ -89,8 +89,6 @@ function CredenciaisContent() {
     const scopeId = (scopeInfo as any)?._id;
 
     setIsResetting(scopeId);
-
-    console.log("INFO", info)
 
     try {
       const response = await fetch(`/api/reset-pass/${_id}?scope=${scope}&scope_id=${scopeId}`, {
@@ -154,10 +152,11 @@ function CredenciaisContent() {
                 </tr>
               </thead>
               <tbody>
-                {scopeInfo.map((info) => (
+                {scopeInfo.map((info: LoginSenha) => (
+                  
                   <tr key={(info.scopeInfo as any)?._id}>
                     <td className="p-2 md:p-4 border-b border-gray-200">
-                      {info.scope === "centro"
+                      {info.scope === "centros"
                         ? (info.scopeInfo as Centro)?.NOME_CENTRO
                         : (info.scopeInfo as Regional)?.NOME_REGIONAL}
                     </td>
@@ -171,15 +170,16 @@ function CredenciaisContent() {
                       <BarraDeCompartilhamento
                         texto={`Olá! Seguem as credenciais para acesso:
 
-    O site que tem que acessar é o seguinte : http://162.214.123.133:3000/
+                              O site que tem que acessar é o seguinte : http://162.214.123.133:3000/
 
-    Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
+                              Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
 
-    • Login: ${info.user}
-    • Senha: ${info.pass}
+                              • Login: ${info.user}
+                              • Senha: ${info.pass}
 
-    Use-as com cuidado e não compartilhe com terceiros sem autorização.
-    Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`}
+                              Use-as com cuidado e não compartilhe com terceiros sem autorização.
+                              Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`
+                            }
                       />
                       <button
                         className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 transition-all"
