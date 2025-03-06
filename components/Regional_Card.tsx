@@ -27,7 +27,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
   useEffect(() => {
     async function fetchCentrosCount() {
 
-      const res = await fetch(`/api/centros?REGIONAL=${regionalId}`);
+      const res = await fetch(`/api/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`);
       
       if (!res.ok) {
         console.error(`Failed to fetch centers for regional ${regionalId}`);
@@ -48,8 +48,11 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
 
       let finalizadosTotal = 0;
 
-      if (data.length >0) {
-        const uniqueCentroIds = new Set(data.map((item: any) => item.CENTRO_ID));
+      if (data.length > 0) {
+        const centroIdsSet = new Set(centros.map((centro: any) => centro._id));
+        const uniqueCentroIds = new Set(
+          data.map((item: any) => item.CENTRO_ID).filter((id: any) => centroIdsSet.has(id))
+        );
         finalizadosTotal = uniqueCentroIds.size;
       }
       setFinalizadosCount(finalizadosTotal);
