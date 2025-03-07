@@ -9,7 +9,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,6 +24,7 @@ interface CardProps {
   required_questions?: string[];
   form: any;
   summaries: Summary[];
+  onFinalizarAnalise: (centroId:string) => void;
 }
 
 const House_Card: React.FC<CardProps> = ({
@@ -32,7 +32,8 @@ const House_Card: React.FC<CardProps> = ({
   avaliacao_question,
   coordenador_questions,
   form,
-  summaries
+  summaries,
+  onFinalizarAnalise
 }) => {
 
   const router = useRouter();
@@ -43,6 +44,7 @@ const House_Card: React.FC<CardProps> = ({
   const [perguntasFaltantes, setPerguntasFaltantes] = useState<string[]>([]);
   const [backgroundColor, setBackgroundColor] = useState<string>('bg-white');
   const [notMetCriterias, setNotMetCriterias] = useState<string[]>([]);
+  const [finalizou, setFinalizou] = useState<boolean>(false);
 
   // 1. Busca todas as respostas do centro
   useEffect(() => {
@@ -110,6 +112,11 @@ const House_Card: React.FC<CardProps> = ({
   const getBackgroundColor = () => {
     if (!questoesCoordenador || questoesCoordenador.length === 0) {
       return 'bg-white';
+    }
+    
+    if(finalizou){
+      setNotMetCriterias([]);
+      return 'bg-green-200';
     }
 
     let questions = questoesCoordenador.length;
@@ -183,7 +190,7 @@ const House_Card: React.FC<CardProps> = ({
 
   useEffect(() => {
     setBackgroundColor(getBackgroundColor());
-  }, [questoesCoordenador, summaries]);
+  }, [questoesCoordenador, summaries, finalizou]);
 
   const handleCardClick = () => {
     router.push(`/cadastro/${centro._id}`);
@@ -307,7 +314,8 @@ const House_Card: React.FC<CardProps> = ({
         onVerHistorico={handleHistoryClick}
         onFinalizarAnalise={(status:boolean) => {
           console.log("FINALIZOU", centro.NOME_CURTO, status)
-          setBackgroundColor(getBackgroundColor())}}
+          setFinalizou(status)}
+        }
         hasSummary={summaries && summaries.length > 0}
       />
  
