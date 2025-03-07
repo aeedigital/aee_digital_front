@@ -24,7 +24,6 @@ interface CardProps {
   required_questions?: string[];
   form: any;
   summaries: Summary[];
-  onFinalizarAnalise: (centroId:string) => void;
 }
 
 const House_Card: React.FC<CardProps> = ({
@@ -33,7 +32,6 @@ const House_Card: React.FC<CardProps> = ({
   coordenador_questions,
   form,
   summaries,
-  onFinalizarAnalise
 }) => {
 
   const router = useRouter();
