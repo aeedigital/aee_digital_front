@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createRandomPass } from "@/app/helpers/createRandonPass";
 import { getRandomFakeName } from "@/app/helpers/getRandomFakeName";
+import { Regional } from "@/interfaces/centro.interface";
 
 interface CentroDialogProps {
-  regionalId: string;
+  regional: Regional;
   onCentroCreated: (newCentro: any) => void;
 }
 
-
-export default function CentroDialog({ regionalId, onCentroCreated }: CentroDialogProps) {
+export default function CentroDialog({ regional, onCentroCreated }: CentroDialogProps) {
   const [open, setOpen] = useState(false);
   const [novoCentro, setNovoCentro] = useState({
     NOME_CENTRO: "",
@@ -30,22 +30,23 @@ export default function CentroDialog({ regionalId, onCentroCreated }: CentroDial
         "sabado": [],
         "domingo": []
     },
-    "NOME_CENTRO": "Casa do Caminho Luz e Esperança",
-    "NOME_CURTO": "Luz e Esperança",
+    "NOME_CENTRO": " ",
+    "NOME_CURTO": " ",
     "CNPJ_CENTRO": " ",
     "DATA_FUNDACAO": " ",
-    "REGIONAL": "61b0bc0371572500128b86a0",
+    "REGIONAL": " ",
     "ENDERECO": " ",
     "CEP": " ",
     "BAIRRO": " ",
     "CIDADE": " ",
     "ESTADO": " ",
+    "STATUS": "Pendente",
     "PAIS": "Brasil"
 }
 
   async function createNewCentro() {
     try {
-      const newCentroData = { ...baseCentro, ...novoCentro, REGIONAL: regionalId };
+      const newCentroData = { ...baseCentro, ...novoCentro, REGIONAL: regional._id, PAIS: regional.PAIS || "Brasil" };
 
         console.log("CENTRO DATA",newCentroData)
 
