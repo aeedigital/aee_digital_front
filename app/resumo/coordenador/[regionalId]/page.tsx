@@ -28,6 +28,7 @@ export default function MainPage({params}:any) {
   const [centros, setCentros] = useState<Centro[]>([]);
   const [coordenadores, setCoordenadores] = useState<Pessoa[]>([]);
   const [selectedCoordenador, setSelectedCoordenador] = useState<string | undefined>("");
+  const [regionalInfo, setRegionalInfo] = useState<any>({});
 
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
@@ -114,6 +115,7 @@ export default function MainPage({params}:any) {
 
       setSelectedCoordenador(coordenador.NOME);
       setCentros(centrosData);
+      setRegionalInfo(regionalData);
 
       summariesData.sort((a: any, b: any) => {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -164,6 +166,7 @@ export default function MainPage({params}:any) {
       });
       const data = await response.json();
       console.log("data", data)
+
       setSelectedCoordenador(coordenador?.NOME);
       
     } catch (error) {
@@ -217,7 +220,7 @@ export default function MainPage({params}:any) {
 
             {user?.role === "admin" && (
               <div className="mb-4">
-                <CentroDialog regionalId={regionalId} onCentroCreated={handleCentroCreated} />
+                <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
               </div>
             )}
           <div style={{ display: "flex", flexWrap: "wrap" }}>
