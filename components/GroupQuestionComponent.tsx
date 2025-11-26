@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState,useMemo } from "react";
+import { useEffect, useRef, useState,useMemo } from "react";
 
 import { QuestionComponent } from "./QuestionComponent";
 import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
 import { useToast } from "@/hooks/use-toast";
 import { FiPlus, FiTrash } from "react-icons/fi";
 import { apiUrl } from "@/lib/api";
+
+const parseJsonSafe = async (res: Response) => {
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+};
 
 interface QuestionProps {
   questionGroup: QuestionGroup;
@@ -27,6 +32,7 @@ interface QuestionAnswerGroup {
 export function GroupQuestionComponent({ questionGroup, centroId, initialCache, onAnswerChange }: QuestionProps) {
   const { toast } = useToast();
   const [answerGroups, setAnswerGroups] = useState<QuestionAnswerGroup[]>([]);
+  const initializedRef = useRef(false);
   
 
   function setGroupCache() {
@@ -48,7 +54,13 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
       headers: {
         'Content-Type': 'application/json',
       }
-    }).then((res:any) => res.json());
+    }).then(async (res:any) => {
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Erro ao remover resposta");
+      }
+      return parseJsonSafe(res);
+    });
 
     onAnswerChange(questionId, answerId, null)
 
@@ -157,8 +169,11 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
       setAnswerGroups(tempAnswerGroups);
     }
 
-    // Initialize with empty groups and then fetch answers
-    setAnswerGroups(initializeEmptyGroups(false));
+    // Initialize empty groups only once to avoid flicker on updates
+    if (!initializedRef.current) {
+      setAnswerGroups(initializeEmptyGroups(false));
+      initializedRef.current = true;
+    }
     fetchAnswers();
   }, [questionGroup, centroId, initialCache]);
 

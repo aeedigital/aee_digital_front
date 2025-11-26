@@ -115,10 +115,20 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
       const allDates = generateDateRange(startDate, endDate);
       const summariesGroupedData = groupEventsByDay(summaries);
 
-      const totalUniqueSummariesByCentro = summaries.reduce((acc: Record<string, number>, summary: Summary) => {
-        acc[summary.CENTRO_ID] = (acc[summary.CENTRO_ID] || 0) + 1;
-        return acc;
-      }, {});
+      // último summary por centro (mais recente)
+      const latestSummaryByCentro = summaries.reduce(
+        (acc: Record<string, { ts: number; summary: Summary }>, summary: Summary) => {
+          const ts = new Date(summary.updatedAt ?? summary.createdAt).getTime();
+          const current = acc[summary.CENTRO_ID];
+
+          if (!current || ts > current.ts) {
+            acc[summary.CENTRO_ID] = { ts, summary };
+          }
+
+          return acc;
+        },
+        {}
+      );
 
       const filledData = allDates.map((date) => summariesGroupedData[date] || 0);
 
@@ -137,7 +147,9 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
         ],
       });
 
-      const pendente = 100 - (Object.keys(totalUniqueSummariesByCentro).length / centros.length * 100);
+      const responded = Object.keys(latestSummaryByCentro).length;
+      const pendenteRaw = centros.length ? 100 - (responded / centros.length) * 100 : 0;
+      const pendente = Math.min(100, Math.max(0, pendenteRaw));
 
       setChartDataBar({
         labels: ["Faltando", "Respondido"],

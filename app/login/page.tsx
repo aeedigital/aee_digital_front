@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const { setUser } = useUser();
@@ -30,6 +31,9 @@ export default function LoginPage() {
     
     const query = new URLSearchParams({ user, pass }).toString();
     const users: any[] = await fetch(apiUrl(`/passes?${query}`)).then((res) => res.json());
+    if (!Array.isArray(users) || users.length === 0) {
+      throw new Error("Credenciais inválidas");
+    }
    
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
@@ -57,6 +61,7 @@ export default function LoginPage() {
   }
 
   const handleLogin = async () => {
+    setErrorMessage(null);
     setIsLoading(true);
     try {
       const auth = await Auth(username, password);
@@ -74,10 +79,10 @@ export default function LoginPage() {
         }
         router.push(initialPage);
       } else {
-        alert('Credenciais inválidas');
+        setErrorMessage('Usuário ou senha inválidos. Verifique e tente novamente.');
       }
     } catch (error) {
-      alert('Credenciais inválidas');
+      setErrorMessage('Não foi possível entrar. Confira usuário e senha e tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +132,9 @@ export default function LoginPage() {
               <Button onClick={handleLogin} disabled={isLoading} className="w-full">
                 {isLoading ? 'Carregando...' : 'Login'}
               </Button>
+              {errorMessage && (
+                <p className="text-red-600 text-sm text-center w-full">{errorMessage}</p>
+              )}
               {/* <p className="text-sm text-gray-500">
                 Não tem uma conta?{' '}
                 <a href="/register" className="text-blue-500 hover:underline">

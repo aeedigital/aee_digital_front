@@ -21,6 +21,15 @@ const SkeletonCard = () => (
   <div style={{ width: "300px", height: "200px", margin: "10px", background: "#e0e0e0", borderRadius: "8px", animation: "pulse 1.5s infinite" }} />
 );
 
+async function safeJson(response: Response) {
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Falha na requisição (${response.status})`);
+  }
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
 export default function ResumoCoordenadorWrapper() {
   return (
     <Suspense fallback={<div>Carregando regional...</div>}>
@@ -100,14 +109,16 @@ function MainPage() {
         }
 
       let [regionalData, centrosData, summariesData, formData, pessoasData] = await Promise.all([
-        fetch(apiUrl(`/regionais/${regionalId}`)).then((res) => res.json()),
-        fetch(apiUrl(`/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`)).then((res) => res.json()),
-        fetch(summariesPath).then((res) => res.json()),
-        fetch(apiUrl(`/forms?_id=${cadastroInfo.formId}`)).then((res) => res.json()),
-        fetch(apiUrl(`/pessoas`)).then((res) => res.json())
+        fetch(apiUrl(`/regionais/${regionalId}`)).then(safeJson),
+        fetch(apiUrl(`/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`)).then(safeJson),
+        fetch(summariesPath).then(safeJson),
+        fetch(apiUrl(`/forms?_id=${cadastroInfo.formId}`)).then(safeJson),
+        fetch(apiUrl(`/pessoas`)).then(safeJson)
       ])
 
-      const coordenador = await fetch(apiUrl(`/pessoas/${regionalData.COORDENADOR_ID}`)).then((res) => res.json())
+      const coordenador = regionalData?.COORDENADOR_ID
+        ? await fetch(apiUrl(`/pessoas/${regionalData.COORDENADOR_ID}`)).then(safeJson)
+        : null;
 
       const form = formData[0]
 
@@ -121,10 +132,10 @@ function MainPage() {
 
       setCoordenadores(pessoasData);
 
-      setAvaliacaoQuestion(autoavaliacaoQuestion)
+      setAvaliacaoQuestion(autoavaliacaoQuestion);
       setCoordenadorQuestoes(questoes);
 
-      setSelectedCoordenador(coordenador.NOME);
+      setSelectedCoordenador(coordenador?.NOME ?? "");
       setCentros(centrosData);
       setRegionalInfo(regionalData);
 
@@ -190,6 +201,64 @@ function MainPage() {
     }
   }
 
+  const collectQuestions = () => {
+    const questions: Question[] = [];
+    (formulario as any)?.PAGES?.forEach((page: any) => {
+      page.QUIZES?.forEach((quiz: any) => {
+        quiz.QUESTIONS?.forEach((group: any) => {
+          group.GROUP?.forEach((q: Question) => questions.push(q));
+        });
+      });
+    });
+    return questions;
+  };
+
+  const exportLatestSummaries = () => {
+    const questions = collectQuestions();
+    if (!questions.length) {
+      alert("Não foi possível encontrar perguntas para montar o arquivo.");
+      return;
+    }
+
+    const headers = ["Centro", "Atualizado em", ...questions.map((q) => q.QUESTION)];
+    const csvRows: string[] = [];
+    const escape = (value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    centros.forEach((centro) => {
+      const summaries = summaryByCentroId[centro._id];
+      if (!summaries || summaries.length === 0) {
+        return;
+      }
+
+      const latest = summaries[summaries.length - 1];
+      const answersMap = new Map<string, string>();
+      latest.QUESTIONS?.forEach((q: any) => {
+        answersMap.set(q.QUESTION, q.ANSWER);
+      });
+
+      const row = [
+        centro.NOME_CENTRO || centro.NOME_CURTO || centro._id,
+        latest.updatedAt || latest.createdAt || "",
+        ...questions.map((q) => answersMap.get(q._id) ?? "")
+      ];
+      csvRows.push(row.map(escape).join(";"));
+    });
+
+    if (!csvRows.length) {
+      alert("Nenhum resumo encontrado para exportar.");
+      return;
+    }
+
+    const csvContent = [headers.map(escape).join(";"), ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "resumos_coordenador.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       {!regionalId ? (
@@ -235,11 +304,18 @@ function MainPage() {
             regionalId={regionalId}
           />
 
-            {user?.role === "admin" && (
-              <div className="mb-4">
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                onClick={exportLatestSummaries}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              >
+                Exportar últimos resumos (CSV)
+              </button>
+              {user?.role === "admin" && (
                 <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
-              </div>
-            )}
+              )}
+            </div>
+
           <div style={{ display: "flex", flexWrap: "wrap" }}>
             {centros.map((centro: Centro) => (
               <House_Card

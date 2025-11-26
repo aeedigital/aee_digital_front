@@ -35,7 +35,9 @@ function CadastroPage() {
 
   // Atualiza a URL ao mudar de página
   const updatePageInUrl = (pageIndex: number) => {
-    router.push(`?page=${pageIndex + 1}`, { scroll: false });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", (pageIndex + 1).toString());
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
   useEffect(() => {
