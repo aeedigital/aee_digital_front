@@ -7,12 +7,8 @@ export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    // Faz a requisição para a API de logout
-    await fetch('/api/logout', {
-      method: 'POST',
-    });
-    // Redireciona para a página de login
-    router.push('/login');
+    // Apenas redireciona para a página de logout (que limpa os cookies)
+    router.push('/logout');
   };
 
   return (

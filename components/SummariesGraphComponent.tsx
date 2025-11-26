@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Line, Bar } from "react-chartjs-2";
+import { apiUrl } from "@/lib/api";
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -84,7 +86,7 @@ const barOptions = {
     },
   },
   scales: {
-    y: { beginAtZero: true, max: 100, ticks: { callback: function(value: number | string) { return `${value}%`; } } },
+    y: { beginAtZero: true, max: 100, ticks: { callback: function (value: number | string) { return `${value}%`; } } },
   },
 };
 
@@ -97,13 +99,18 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
   // Função para buscar os dados da API
   const fetchData = async () => {
     try {
-      const summariesPath = `/api/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt&dateFrom=${startDate}&dateTo=${endDate}`;
-      const centrosPath = `/api/centros?STATUS=Pendente,Integrada,Inscrita`;
+
+      console.log("Buscando dados para o gráfico com datas:", { startDate, endDate });
+      const summariesPath = apiUrl(`/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt&dateFrom=${startDate}&dateTo=${endDate}`);
+      const centrosPath = apiUrl(`/centros?STATUS=Pendente,Integrada,Inscrita`);
 
       const [summaries, centros]: [Summary[], Centro[]] = await Promise.all([
         fetch(summariesPath).then(res => res.json()),
         fetch(centrosPath).then(res => res.json())
       ]);
+
+      console.log("Dados de resumos recebidos:", summaries);
+      console.log("Dados de centros recebidos:", centros);
 
       const allDates = generateDateRange(startDate, endDate);
       const summariesGroupedData = groupEventsByDay(summaries);

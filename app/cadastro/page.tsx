@@ -1,17 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
 import { Answer, Page } from "@/interfaces/form.interface";
 import { useSearchParams, useRouter } from "next/navigation";
+import { apiUrl } from "@/lib/api";
 
-export default function DynamicPage({ params }: any) {
-  const { centroId } = params;
-  
+export default function CadastroPageWrapper() {
+  return (
+    <Suspense fallback={<div>Carregando cadastro...</div>}>
+      <CadastroPage />
+    </Suspense>
+  );
+}
+
+function CadastroPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const centroId = searchParams.get("centroId");
 
   const [pages, setPages] = useState<Page[]>([]);
   const [allPages, setAllPages] = useState<Page[]>([]);
@@ -33,18 +41,23 @@ export default function DynamicPage({ params }: any) {
   useEffect(() => {
     let summaryId = searchParams.get("summaryId");
 
+    if (!centroId) {
+      setIsLoading(false);
+      return;
+    }
+
     async function fetchData() {
       setIsLoading(true);
 
       try {
         const formResponse = await fetch(
-          "/api/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual"
+          apiUrl("/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual")
         ).then((res) => res.json());
 
         let answers;
 
         if (summaryId) {
-          const summary = await fetch(`/api/summaries/${summaryId}`).then((res) => res.json());
+          const summary = await fetch(apiUrl(`/summaries/${summaryId}`)).then((res) => res.json());
           answers = summary?.QUESTIONS.map((answer: any) => ({
             QUESTION_ID: answer.QUESTION,
             CENTRO_ID: summary.CENTRO_ID,
@@ -52,7 +65,7 @@ export default function DynamicPage({ params }: any) {
             _id: answer._id,
           }));
         } else {
-          answers = await fetch(`/api/answers?CENTRO_ID=${centroId}`).then((res) => res.json());
+          answers = await fetch(apiUrl(`/answers?CENTRO_ID=${centroId}`)).then((res) => res.json());
         }
 
         const cache: Record<string, any[]> = {};
@@ -130,6 +143,10 @@ export default function DynamicPage({ params }: any) {
     setCurrentPageIndex(pageIndex);
     updatePageInUrl(pageIndex);
   };
+
+  if (!centroId) {
+    return <div>Centro não informado.</div>;
+  }
 
   return (
     <div className="w-full">

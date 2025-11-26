@@ -16,6 +16,7 @@ import {
 import FormInput from './FormInput';
 import { QuestionComponent } from './QuestionComponent';
 import {AcoesCoordenadorCentro} from '@components/AcoesCoordenadorCentro';
+import { apiUrl } from '@/lib/api';
 
 interface CardProps {
   centro: Centro;
@@ -48,7 +49,7 @@ const House_Card: React.FC<CardProps> = ({
   useEffect(() => {
     async function fetchAllAnswers() {
       try {
-        let path = `/api/answers?CENTRO_ID=${centro._id}`;
+        let path = apiUrl(`/answers?CENTRO_ID=${centro._id}`);
         const res = await fetch(path);
         const data = await res.json();
         setAllAnswers(data);
@@ -191,11 +192,11 @@ const House_Card: React.FC<CardProps> = ({
   }, [questoesCoordenador, summaries, finalizou]);
 
   const handleCardClick = () => {
-    router.push(`/cadastro/${centro._id}`);
+    router.push(`/cadastro?centroId=${centro._id}`);
   };
 
   const handleHistoryClick = () => {
-    router.push(`/cadastro/historico/${centro._id}`);
+    router.push(`/cadastro/historico?centroId=${centro._id}`);
   };
 
   const handleAnswerChange = (

@@ -5,6 +5,7 @@ import { QuestionAnswer, Summary, SummaryResponse } from "@/interfaces/form.inte
 import { set } from "date-fns";
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import { appendDatePeriod } from "@/app/helpers/datePeriodHelper";
+import { apiUrl } from "@/lib/api";
 
 interface CoordAnalisisButtonProps {
     onFinalizarAnalise: (status:boolean) => void;
@@ -37,7 +38,7 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestio
     useEffect(() => {
         async function fetchSummary() {
             try {
-                let summariesPath = `/api/centros/${centroId}/summaries`;
+                let summariesPath = apiUrl(`/centros/${centroId}/summaries`);
                 const cadastroInfo = await getCadastroInfo();
 
                 if (cadastroInfo?.start && cadastroInfo?.end) {
@@ -82,7 +83,7 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestio
             if (summary && questions) {
                 summary.QUESTIONS = questions;
             }
-    
+
             const payload = {
                 FORM_ID: summary?.FORM_ID,
                 CENTRO_ID: summary?.CENTRO_ID,
@@ -91,14 +92,14 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestio
             //atualiza o summary
 
             const [patchResponse, validateResponse] = await Promise.all([
-                fetch(`/api/summaries/${summary?._id}`, {
+                fetch(apiUrl(`/summaries/${summary?._id}`), {
                     method: "PATCH",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(payload),
                 }),
-                fetch(`/api/summaries/${summary?._id}/validated-by-coord`, {
+                fetch(apiUrl(`/summaries/${summary?._id}/validated-by-coord`), {
                     method: "PATCH",
                     headers: {
                         "Content-Type": "application/json",

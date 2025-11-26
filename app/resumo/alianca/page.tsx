@@ -6,6 +6,7 @@ import { Period } from "@/helpers/datePeriodHelper";
 import { Regional } from "@/interfaces/centro.interface";
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import SummariesGraphComponent from "@/components/SummariesGraphComponent";
+import { apiUrl } from "@/lib/api";
 
 function SkeletonCard() {
   return (
@@ -33,7 +34,7 @@ function RegionalList() {
         const cadastroInfo = await getCadastroInfo();
         setPeriod({ start: cadastroInfo.start, end: cadastroInfo.end });
 
-        const apiPath = `/api/regionais`;
+        const apiPath = apiUrl(`/regionais`);
         const response = await fetch(apiPath);
         if (!response.ok) throw new Error("Falha ao buscar regionais");
 

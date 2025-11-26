@@ -9,7 +9,7 @@ export async function Auth(user: string, pass: string): Promise<Authorization>{
     
     let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}`;
 
-    const users: any[] = await fetch(`${apiUrl}/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
+    const users: any[] = await fetch(`${apiUrl}/passes?user=${user}&pass=${pass}`).then((res) => res.json());
    
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo

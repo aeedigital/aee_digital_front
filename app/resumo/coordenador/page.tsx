@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import House_Card from '@/components/House_Card';
 import { Question, Summary} from '@/interfaces/form.interface'
@@ -9,6 +10,7 @@ import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import { appendDatePeriod, Period } from '@/app/helpers/datePeriodHelper';
 import { Centro } from '@/interfaces/centro.interface';
 import { Pessoa } from '@/interfaces/pessoas.interface';
+import { apiUrl } from '@/lib/api';
 
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,8 +21,17 @@ const SkeletonCard = () => (
   <div style={{ width: "300px", height: "200px", margin: "10px", background: "#e0e0e0", borderRadius: "8px", animation: "pulse 1.5s infinite" }} />
 );
 
-export default function MainPage({params}:any) {
-  const { regionalId } = params;
+export default function ResumoCoordenadorWrapper() {
+  return (
+    <Suspense fallback={<div>Carregando regional...</div>}>
+      <MainPage />
+    </Suspense>
+  );
+}
+
+function MainPage() {
+  const searchParams = useSearchParams();
+  const regionalId = searchParams.get('regionalId');
 
   const { user } = useUser();
 
@@ -74,7 +85,7 @@ export default function MainPage({params}:any) {
   useEffect(()=>{
     async function fetchData() {
 
-      if (hasLoadedRef.current) {
+      if (hasLoadedRef.current || !regionalId) {
         return;
       }
 
@@ -82,21 +93,21 @@ export default function MainPage({params}:any) {
 
       const cadastroInfo = await getCadastroInfo();
 
-      let summariesPath = `/api/regionais/${regionalId}/summaries`;
+      let summariesPath = apiUrl(`/regionais/${regionalId}/summaries`);
 
       if (cadastroInfo?.start && cadastroInfo?.end) {
         summariesPath = appendDatePeriod(summariesPath, { start: cadastroInfo.start, end: cadastroInfo.end });
         }
 
       let [regionalData, centrosData, summariesData, formData, pessoasData] = await Promise.all([
-        fetch(`/api/regionais/${regionalId}`).then((res) => res.json()),
-        fetch(`/api/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`).then((res) => res.json()),
+        fetch(apiUrl(`/regionais/${regionalId}`)).then((res) => res.json()),
+        fetch(apiUrl(`/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`)).then((res) => res.json()),
         fetch(summariesPath).then((res) => res.json()),
-        fetch(`/api/forms?_id=${cadastroInfo.formId}`).then((res) => res.json()),
-        fetch(`/api/pessoas`).then((res) => res.json())
+        fetch(apiUrl(`/forms?_id=${cadastroInfo.formId}`)).then((res) => res.json()),
+        fetch(apiUrl(`/pessoas`)).then((res) => res.json())
       ])
 
-      const coordenador = await fetch(`/api/pessoas/${regionalData.COORDENADOR_ID}`).then((res) => res.json())
+      const coordenador = await fetch(apiUrl(`/pessoas/${regionalData.COORDENADOR_ID}`)).then((res) => res.json())
 
       const form = formData[0]
 
@@ -156,10 +167,14 @@ export default function MainPage({params}:any) {
 
   async function UpdateCoordinator(nameCoordinator: string){
     try {
+      if (!regionalId) {
+        throw new Error("Regional não informada");
+      }
+
       let coordenador: Pessoa|undefined = coordenadores.find((coordenador: Pessoa) => coordenador.NOME === nameCoordinator);
       const coordenadorId = coordenador?._id;
 
-      const response = await fetch(`/api/regionais/${regionalId}`, {
+      const response = await fetch(apiUrl(`/regionais/${regionalId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({COORDENADOR_ID: coordenadorId}),
@@ -177,7 +192,9 @@ export default function MainPage({params}:any) {
 
   return (
     <div>
-      {loading ? (
+      {!regionalId ? (
+        <div>Selecione uma regional para visualizar os dados.</div>
+      ) : loading ? (
         <div>
           <div style={{ marginBottom: "20px" }}>
             <SkeletonCard />

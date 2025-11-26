@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {UserRole} from '../actions/permitions'
+import { apiUrl } from "@/lib/api";
 
 type Authorization = {
   role: UserRole;
@@ -27,7 +28,8 @@ export default function LoginPage() {
 
   async function Auth(user: string, pass: string): Promise<Authorization>{
     
-    const users: any[] = await fetch(`/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
+    const query = new URLSearchParams({ user, pass }).toString();
+    const users: any[] = await fetch(apiUrl(`/passes?${query}`)).then((res) => res.json());
    
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo

@@ -1,18 +1,32 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import  Summary_Card  from '@/components/Summary_Card';
+import { apiUrl } from '@/lib/api';
 
-export default function Historico({params}:any) {
+export default function HistoricoWrapper() {
+    return (
+        <Suspense fallback={<div>Carregando histórico...</div>}>
+            <Historico />
+        </Suspense>
+    );
+}
+
+function Historico() {
     
-    const {centroId} = params;
+    const searchParams = useSearchParams();
+    const centroId = searchParams.get("centroId");
 
     const[summaries, setSummaries] = useState([]);
 
     useEffect(()=>{
         async function fetchData(){
-            const res = await fetch(`/api/centros/${centroId}/summaries?sortBy=updatedAt:desc`);
+            if (!centroId) {
+                return;
+            }
+            const res = await fetch(apiUrl(`/centros/${centroId}/summaries?sortBy=updatedAt:desc`));
             const data = await res.json();
 
             const filteredDataOrderedByCreatedDate = data.sort((a:any, b:any) => {
@@ -22,10 +36,11 @@ export default function Historico({params}:any) {
             setSummaries(filteredDataOrderedByCreatedDate);
         }
         fetchData();
-    },[])
+    },[centroId])
 
 
     return (
+        !centroId ? <div>Centro não informado.</div> :
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {summaries.map((summary:any) => (
                 <Summary_Card 

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card"
 
 import { appendDatePeriod, Period } from '@/helpers/datePeriodHelper';
+import { apiUrl } from '@/lib/api';
 
 interface CardProps {
   nome: string;
@@ -27,7 +28,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
   useEffect(() => {
     async function fetchCentrosCount() {
 
-      const res = await fetch(`/api/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`);
+      const res = await fetch(apiUrl(`/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`));
       
       if (!res.ok) {
         console.error(`Failed to fetch centers for regional ${regionalId}`);
@@ -37,7 +38,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
       const centros = await res.json();
       setCentrosCount(centros.length);
 
-      let summaryPath = `/api/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`;
+      let summaryPath = apiUrl(`/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`);
 
       if (period?.start && period?.end) {
         summaryPath = appendDatePeriod(summaryPath, period);
@@ -79,7 +80,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
 
   const handleCardClick = () => {
     // Navega para a rota com o ID do regional
-    router.push(`/resumo/coordenador/${regionalId}`);
+    router.push(`/resumo/coordenador?regionalId=${regionalId}`);
   };
 
   return (

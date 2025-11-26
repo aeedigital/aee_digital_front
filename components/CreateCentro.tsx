@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { createRandomPass } from "@/app/helpers/createRandonPass";
 import { getRandomFakeName } from "@/app/helpers/getRandomFakeName";
 import { Regional } from "@/interfaces/centro.interface";
+import { apiUrl } from "@/lib/api";
 
 interface CentroDialogProps {
   regional: Regional;
@@ -50,7 +51,7 @@ export default function CentroDialog({ regional, onCentroCreated }: CentroDialog
 
         console.log("CENTRO DATA",newCentroData)
 
-      const response = await fetch("/api/centros", {
+      const response = await fetch(apiUrl("/centros"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCentroData),
@@ -73,7 +74,7 @@ export default function CentroDialog({ regional, onCentroCreated }: CentroDialog
     const user = getRandomFakeName(novoCentro.NOME_CENTRO);
     const pass = createRandomPass(6);
 
-    const response = await fetch("/api/passes", {
+    const response = await fetch(apiUrl("/passes"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

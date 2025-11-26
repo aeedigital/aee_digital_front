@@ -7,8 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pessoa } from '@/interfaces/pessoas.interface';
-
-const API_URL = '/api/pessoas';
+import { apiUrl } from '@/lib/api';
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Pessoa[]>([]);
@@ -18,7 +17,7 @@ export default function ContactsPage() {
   const [currentContact, setCurrentContact] = useState<Pessoa | null>(null);
 
   useEffect(() => {
-    fetch(API_URL)
+    fetch(apiUrl('/pessoas'))
       .then((res) => res.json())
       .then((data) => {
         setContacts(data);
@@ -36,14 +35,14 @@ export default function ContactsPage() {
   const handleSave = async () => {
       console.log("currentContact", currentContact);
     if (currentContact && currentContact._id) {
-      await fetch(`${API_URL}/${currentContact._id}`, {
+      await fetch(apiUrl(`/pessoas/${currentContact._id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(currentContact),
       });
       setContacts(contacts.map((c) => (c._id === currentContact._id ? currentContact : c)));
     } else {
-      const response = await fetch(API_URL, {
+      const response = await fetch(apiUrl('/pessoas'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(currentContact),

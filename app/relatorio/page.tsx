@@ -1,7 +1,34 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  ColumnDef,
+  SortingState,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ArrowUpDown } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+
+export default function RelatorioPageWrapper() {
+  return (
+    <Suspense fallback={<p>Carregando relatório...</p>}>
+      <RelatorioPage />
+    </Suspense>
+  );
+}
 
 // Interfaces
 interface Centro {
@@ -19,33 +46,28 @@ interface Regional {
   NOME_REGIONAL: string;
 }
 
-interface GroupedItem {
-  resposta: string;
-  centros: Centro[];
-}
-
 // Services
 async function fetchRegionais(scopeType: string, scope_id: string): Promise<Regional[]> {
   if (scopeType === "regional") {
-    const response = await fetch(`/api/regionais/${scope_id}`);
+    const response = await apiFetch(`/regionais/${scope_id}`);
     if (!response.ok) throw new Error("Erro ao buscar informações da regional");
     const regional = await response.json();
     return [regional];
   } else {
-    const response = await fetch(`/api/regionais`);
+    const response = await apiFetch(`/regionais`);
     if (!response.ok) throw new Error("Erro ao buscar regionais");
     return await response.json();
   }
 }
 
 async function fetchCentros(regionalId: string): Promise<Centro[]> {
-  const response = await fetch(`/api/regionais/${regionalId}/centros`);
+  const response = await apiFetch(`/regionais/${regionalId}/centros`);
   if (!response.ok) throw new Error(`Erro ao buscar centros para a regional ${regionalId}`);
   return await response.json();
 }
 
 async function fetchSummaries(regionalId: string): Promise<Summary[]> {
-  const response = await fetch(`/api/regionais/${regionalId}/summaries`);
+  const response = await apiFetch(`/regionais/${regionalId}/summaries`);
   if (!response.ok) throw new Error(`Erro ao buscar summaries para a regional ${regionalId}`);
   return await response.json();
 }
@@ -55,35 +77,100 @@ const RegionalTable: React.FC<{
   regional: Regional;
   centros: Centro[];
   situacoes: { centroId: string; situacao: string }[];
-}> = ({ regional, centros, situacoes }) => (
-  <div className="mb-8">
-    <h1 className="text-2xl font-bold mb-4">Relatório - {regional.NOME_REGIONAL}</h1>
-    <table className="min-w-full border border-gray-200 text-sm table-fixed">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="p-2 text-left border-b border-gray-200 w-1/2">Nome Curto</th>
-          <th className="p-2 text-left border-b border-gray-200 w-1/2">Situação</th>
-        </tr>
-      </thead>
-      <tbody>
-        {centros.map((centro) => {
-          const situacao = situacoes.find((s) => s.centroId === centro._id)?.situacao || "Não respondido";
-          return (
-            <tr key={centro._id}>
-              <td className="p-2 border-b border-gray-200">{centro.NOME_CURTO}</td>
-              <td className="p-2 border-b border-gray-200">{situacao}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+}> = ({ regional, centros, situacoes }) => {
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  const data = centros.map((centro) => ({
+    id: centro._id,
+    nomeCurto: centro.NOME_CURTO,
+    situacao: situacoes.find((s) => s.centroId === centro._id)?.situacao || "Não respondido",
+  }));
+
+  const columns: ColumnDef<typeof data[0]>[] = [
+    {
+      accessorKey: "nomeCurto",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Nome Curto
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+    },
+    {
+      accessorKey: "situacao",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Situação
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(), // Ensure sorted row model is used
+  });
+
+  return (
+    <div className="mb-8">
+      <h1 className="text-2xl font-bold mb-4">Relatório - {regional.NOME_REGIONAL}</h1>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  Nenhum resultado encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
 
 // Main Component
-const RelatorioPage: React.FC<{ params: { contextId: string } }> = ({ params }) => {
-  const { contextId: scope_id } = params;
+const RelatorioPage: React.FC = () => {
   const searchParams = useSearchParams();
+  const scope_id = searchParams.get("contextId") || searchParams.get("scope_id") || "";
   const scopeType = searchParams.get("scopeType") || "regional";
 
   const [regionais, setRegionais] = useState<Regional[]>([]);
@@ -97,6 +184,10 @@ const RelatorioPage: React.FC<{ params: { contextId: string } }> = ({ params }) 
     async function fetchData() {
       try {
         setLoadingRegionais(true);
+
+        if (!scope_id) {
+          throw new Error("Contexto não informado");
+        }
 
         const regionaisData = await fetchRegionais(scopeType, scope_id);
         setRegionais(regionaisData);
@@ -154,5 +245,3 @@ const RelatorioPage: React.FC<{ params: { contextId: string } }> = ({ params }) 
     </div>
   );
 };
-
-export default RelatorioPage;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import FormInput from '@/components/FormInput';
 import { Answer } from '@/interfaces/form.interface';
+import { apiUrl } from '@/lib/api';
 
 interface QuestionProps {
   question: any;
@@ -28,7 +29,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
 
       if (questionValue._id) {
         response = await fetch(
-          `/api/answers/${questionValue._id}`,
+          apiUrl(`/answers/${questionValue._id}`),
           {
             method: 'PATCH',
             headers: {
@@ -41,7 +42,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
         ).then((res: any) => res.json());
       } else {
         response = await fetch(
-          `/api/answers`,
+          apiUrl(`/answers`),
           {
             method: 'POST',
             headers: {

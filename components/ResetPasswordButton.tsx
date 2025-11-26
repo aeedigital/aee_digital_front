@@ -6,6 +6,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User } from "@/context/UserContext";
+import { apiUrl } from "@/lib/api";
 
 interface ResetPasswordButtonProps {
   callback?: (userData: { _id: string; user: string; pass: string; role: string; scope: string| undefined }) => void;
@@ -31,7 +32,7 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
   async function handleResetPassword() {
     setLoading(true);
     try {
-      const response = await fetch(`/api/reset-password/${user?._id}`, {
+      const response = await fetch(apiUrl(`/reset-password/${user?._id}`), {
         method: "POST"
       });
 

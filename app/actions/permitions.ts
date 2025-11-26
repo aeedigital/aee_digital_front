@@ -4,29 +4,29 @@ export type UserRole = 'coord_geral' | 'coord_regional' | 'presidente' | 'admin'
 const permissions: Record<UserRole, RegExp[]> = {
   admin:[
     /^\/$/,
-    /^\/cadastro(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/,
-    /^\/resumo\/alianca(\/[^\/]+)?$/,
-    /^\/pessoas(\/[^\/]+)?$/,
+    /^\/cadastro/,
+    /^\/resumo\/coordenador/,
+    /^\/resumo\/coordenador\/credenciais/,
+    /^\/resumo\/alianca/,
+    /^\/pessoas/,
   ],
   coord_geral: [
     /^\/$/,
-    /^\/cadastro(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/,
-    /^\/resumo\/alianca$(\/[^\/]+)?$/
+    /^\/cadastro/,
+    /^\/resumo\/coordenador/,
+    /^\/resumo\/coordenador\/credenciais/,
+    /^\/resumo\/alianca/
   ],
   coord_regional: [
     /^\/$/,
-    /^\/cadastro(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?$/,
-    /^\/resumo\/coordenador(\/[^\/]+)?\/credenciais$/
+    /^\/cadastro/,
+    /^\/resumo\/coordenador/,
+    /^\/resumo\/coordenador\/credenciais/,
 
   ],
   presidente: [
     /^\/$/,
-    /^\/cadastro(\/[^\/]+)?$/
+    /^\/cadastro/
   ],
 };
 
@@ -38,16 +38,21 @@ const initialPage: Record<UserRole, string> ={
 }
 
 export function getInitialPage(userRole: UserRole, scope: string | undefined){
-  let pagePath = initialPage[userRole]
+  const pagePath = initialPage[userRole];
 
-  let path;
-  if(scope != undefined){
-    path = `${pagePath}/${scope}`
-  }else{
-    path = pagePath
+  if (!scope) {
+    return pagePath;
   }
 
-  return path
+  if (userRole === 'coord_regional') {
+    return `${pagePath}?regionalId=${scope}`;
+  }
+
+  if (userRole === 'presidente') {
+    return `${pagePath}?centroId=${scope}`;
+  }
+
+  return pagePath;
 }
 
 export function canAccessPage(userRole: UserRole, pagePath: string): boolean {

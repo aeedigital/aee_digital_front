@@ -6,6 +6,7 @@ import { QuestionComponent } from "./QuestionComponent";
 import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
 import { useToast } from "@/hooks/use-toast";
 import { FiPlus, FiTrash } from "react-icons/fi";
+import { apiUrl } from "@/lib/api";
 
 interface QuestionProps {
   questionGroup: QuestionGroup;
@@ -42,16 +43,12 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
 
   const removeAnswer = async(questionId:string, answerId:string): Promise<any> =>{
 
-    const answerRemoved = await fetch(
-
-      `${process.env.NEXT_PUBLIC_API_URL}/answers/${answerId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+    const answerRemoved = await fetch(apiUrl(`/answers/${answerId}`), {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
       }
-    ).then((res:any) => res.json());
+    }).then((res:any) => res.json());
 
     onAnswerChange(questionId, answerId, null)
 
@@ -59,21 +56,17 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
   }
 
   const createAnswer = async (questionId: string, value: string): Promise<any>=>{
-    const answerCreated = await fetch(
-
-      `${process.env.NEXT_PUBLIC_API_URL}/answers`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ANSWER: String(value),
-          CENTRO_ID: centroId,
-          QUESTION_ID: questionId
-        }),
-      }
-    ).then((res:any) => res.json());
+    const answerCreated = await fetch(apiUrl(`/answers`), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ANSWER: String(value),
+        CENTRO_ID: centroId,
+        QUESTION_ID: questionId
+      }),
+    }).then((res:any) => res.json());
 
     onAnswerChange(questionId, null, answerCreated)
 

@@ -9,6 +9,9 @@ import { BarraDeCompartilhamento } from "@/components/BarraCompartilhamento";
 import { Centro, Regional } from "@/interfaces/centro.interface";
 import { Pass } from "@/interfaces/auth.interface";
 import { set } from "date-fns";
+import { apiFetch, apiUrl } from "@/lib/api";
+import { createRandomPass } from "@/app/helpers/createRandonPass";
+import { getRandomFakeName } from "@/app/helpers/getRandomFakeName";
 
 interface LoginSenha {
   scopeInfo: Centro | Regional;
@@ -34,12 +37,12 @@ function CredenciaisContent() {
 
   useEffect(() => {
     async function getPasses() {
-      const passes = await fetch(`/api/passes`).then((res) => res.json());
+      const passes = await apiFetch(`/passes`).then((res) => res.json());
       return passes;
     }
 
     async function buscaCredenciaisDosCentros(scopeId: string) {
-      const centros = await fetch(`/api/regionais/${scopeId}/centros`).then((res) => res.json());
+      const centros = await apiFetch(`/regionais/${scopeId}/centros`).then((res) => res.json());
       const passes = await getPasses();
 
       const info = centros.map((centro: Centro) => {
@@ -57,7 +60,7 @@ function CredenciaisContent() {
     }
 
     async function buscaCredenciaisDasRegionais() {
-      const regionais = await fetch(`/api/regionais`).then((res) => res.json());
+      const regionais = await apiFetch(`/regionais`).then((res) => res.json());
       const passes = await getPasses();
 
       const info = regionais.map((regional: Regional) => {
@@ -91,19 +94,32 @@ function CredenciaisContent() {
     setIsResetting(scopeId);
 
     try {
-      const response = await fetch(`/api/reset-pass/${_id}?scope=${scope}&scope_id=${scopeId}`, {
-        method: "POST",
+      const nameField = scope === "centros" ? "NOME_CENTRO" : "NOME_REGIONAL";
+      const group = scope === "centros" ? "presidente" : "coord_regional";
+
+      const scopeDetails = await apiFetch(`/${scope}/${scopeId}`).then((res) => res.json());
+      const name = scopeDetails?.[nameField] || "Centro";
+
+      const newUser = getRandomFakeName(name);
+      const newPassword = createRandomPass(6);
+
+      const body = _id
+        ? { user: newUser, pass: newPassword }
+        : { user: newUser, pass: newPassword, scope_id: scopeId, groups: [group] };
+
+      const url = _id ? apiUrl(`/passes/${_id}`) : apiUrl(`/passes`);
+
+      const response = await fetch(url, {
+        method: _id ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
         throw new Error("Erro ao redefinir a senha.");
       }
-
-      const updatedPass = await response.json();
-
-      const {newPassword, newUser} = updatedPass;
-
-      console.log("UPDATED PASS", updatedPass)
 
       setContextInfo((prev) =>
         prev.map((info) =>

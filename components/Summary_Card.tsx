@@ -55,7 +55,7 @@ const Summary_Card: React.FC<CardProps> = ({
 
   const handleCardClick = () => {
     // 3. Navegar para a página de detalhes da resposta
-    router.push(`/cadastro/${centroId}?summaryId=${_id}`);
+    router.push(`/cadastro?centroId=${centroId}&summaryId=${_id}`);
   }
 
   return (
