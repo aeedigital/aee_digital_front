@@ -60,7 +60,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
     }
 
     fetchCentrosCount();
-  }, [regionalId]);
+  }, [regionalId, period]);
 
   const getBackgroundColor = () => {
     if (centrosCount === null || finalizadosCount === null) {

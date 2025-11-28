@@ -1,6 +1,6 @@
 import { CheckCircle } from "lucide-react";
 import { Button } from "./ui/button";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { QuestionAnswer, Summary, SummaryResponse } from "@/interfaces/form.interface";
 import { set } from "date-fns";
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
@@ -30,10 +30,9 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestio
             }
         }
 
-        console.log("ISREADY", centroId, isReady)
         setIsReady(hasSummary);
 
-    }, [coordQuestionAnswered]);
+    }, [coordQuestionAnswered, hasSummary, centroId]);
 
     useEffect(() => {
         async function fetchSummary() {

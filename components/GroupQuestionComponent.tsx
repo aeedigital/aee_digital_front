@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState,useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 
 import { QuestionComponent } from "./QuestionComponent";
 import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
@@ -35,17 +35,17 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
   const initializedRef = useRef(false);
   
 
-  function setGroupCache() {
-    const localCache: Record<string, Answer[]> = {}
+  const setGroupCache = useCallback(() => {
+    const localCache: Record<string, Answer[]> = {};
 
-    questionGroup.GROUP.forEach(question => {
+    questionGroup.GROUP.forEach((question) => {
       if (initialCache[question._id]) {
-        localCache[question._id] = initialCache[question._id]
+        localCache[question._id] = initialCache[question._id];
       }
     });
 
     return localCache;
-  }
+  }, [questionGroup.GROUP, initialCache]);
 
   const removeAnswer = async(questionId:string, answerId:string): Promise<any> =>{
 
@@ -67,7 +67,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     return answerRemoved;
   }
 
-  const createAnswer = async (questionId: string, value: string): Promise<any>=>{
+  const createAnswer = useCallback(async (questionId: string, value: string): Promise<any>=>{
     const answerCreated = await fetch(apiUrl(`/answers`), {
       method: 'POST',
       headers: {
@@ -83,9 +83,9 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     onAnswerChange(questionId, null, answerCreated)
 
     return answerCreated;
-  }
+  }, [centroId, onAnswerChange]);
 
-  const initializeEmptyGroups = (shouldCreateQuestions:boolean) => {
+  const initializeEmptyGroups = useCallback((shouldCreateQuestions:boolean) => {
     const emptyGroups: QuestionAnswerGroup[] = [];
     // Create a single empty group initially
     const emptyGroup: QuestionAnswerGroup = {
@@ -111,7 +111,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     emptyGroups.push(emptyGroup);
 
     return emptyGroups;
-  };
+  }, [questionGroup.GROUP, centroId, createAnswer]);
 
 
   const handleAddGroup = () => {
@@ -175,7 +175,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
       initializedRef.current = true;
     }
     fetchAnswers();
-  }, [questionGroup, centroId, initialCache]);
+  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, setGroupCache]);
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import House_Card from '@/components/House_Card';
@@ -76,6 +76,7 @@ function MainPage() {
     NOME_CENTRO: "",
     NOME_CURTO: "",
   });
+  const canExport = !loading && centros.length > 0;
 
   function findQuestionByCategory(form: any, category: string) {
 
@@ -201,7 +202,7 @@ function MainPage() {
     }
   }
 
-  const collectQuestions = () => {
+  const collectedQuestions = useMemo(() => {
     const questions: Question[] = [];
     (formulario as any)?.PAGES?.forEach((page: any) => {
       page.QUIZES?.forEach((quiz: any) => {
@@ -211,16 +212,15 @@ function MainPage() {
       });
     });
     return questions;
-  };
+  }, [formulario]);
 
   const exportLatestSummaries = () => {
-    const questions = collectQuestions();
-    if (!questions.length) {
+    if (!collectedQuestions.length) {
       alert("Não foi possível encontrar perguntas para montar o arquivo.");
       return;
     }
 
-    const headers = ["Centro", "Atualizado em", ...questions.map((q) => q.QUESTION)];
+    const headers = ["Centro", "Atualizado em", ...collectedQuestions.map((q) => q.QUESTION)];
     const csvRows: string[] = [];
     const escape = (value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
@@ -239,7 +239,7 @@ function MainPage() {
       const row = [
         centro.NOME_CENTRO || centro.NOME_CURTO || centro._id,
         latest.updatedAt || latest.createdAt || "",
-        ...questions.map((q) => answersMap.get(q._id) ?? "")
+        ...collectedQuestions.map((q) => answersMap.get(q._id) ?? "")
       ];
       csvRows.push(row.map(escape).join(";"));
     });
@@ -265,6 +265,15 @@ function MainPage() {
         <div>Selecione uma regional para visualizar os dados.</div>
       ) : loading ? (
         <div>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              onClick={exportLatestSummaries}
+              disabled={!canExport}
+              className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
+            >
+              Exportar últimos resumos (CSV)
+            </button>
+          </div>
           <div style={{ marginBottom: "20px" }}>
             <SkeletonCard />
           </div>
@@ -276,6 +285,18 @@ function MainPage() {
         </div>
       ) : (
         <>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              onClick={exportLatestSummaries}
+              disabled={!canExport}
+              className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
+            >
+              Exportar últimos resumos (CSV)
+            </button>
+            {user?.role === "admin" && (
+              <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
+            )}
+          </div>
            <ValidacaoCoordenacao
             coordenador={
               user?.role === "admin" ? (
@@ -303,18 +324,6 @@ function MainPage() {
             totalCentros={totalCentros}
             regionalId={regionalId}
           />
-
-            <div className="mb-4 flex flex-wrap gap-2">
-              <button
-                onClick={exportLatestSummaries}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-              >
-                Exportar últimos resumos (CSV)
-              </button>
-              {user?.role === "admin" && (
-                <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
-              )}
-            </div>
 
           <div style={{ display: "flex", flexWrap: "wrap" }}>
             {centros.map((centro: Centro) => (

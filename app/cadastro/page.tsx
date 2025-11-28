@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useMemo, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
 import { Answer, Page } from "@/interfaces/form.interface";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiUrl } from "@/lib/api";
+import { fetchJsonCached } from "@/lib/fetchWithCache";
 
 export default function CadastroPageWrapper() {
   return (
@@ -30,15 +31,15 @@ function CadastroPage() {
 
   // Obtém a página da URL e converte para número (default = 1)
   const queryPage = parseInt(searchParams.get("page") || "1", 10) - 1;
-  const totalPages = pages.length + 1; // Adiciona 1 para incluir a página de validação
+  const totalPages = useMemo(() => pages.length + 1, [pages]); // inclui validação
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(Math.max(queryPage, 0));
 
   // Atualiza a URL ao mudar de página
-  const updatePageInUrl = (pageIndex: number) => {
+  const updatePageInUrl = useCallback((pageIndex: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", (pageIndex + 1).toString());
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }, [router, searchParams]);
 
   useEffect(() => {
     let summaryId = searchParams.get("summaryId");
@@ -52,14 +53,14 @@ function CadastroPage() {
       setIsLoading(true);
 
       try {
-        const formResponse = await fetch(
+        const formResponse = await fetchJsonCached(
           apiUrl("/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual")
-        ).then((res) => res.json());
+        );
 
         let answers;
 
         if (summaryId) {
-          const summary = await fetch(apiUrl(`/summaries/${summaryId}`)).then((res) => res.json());
+          const summary = await fetchJsonCached(apiUrl(`/summaries/${summaryId}`));
           answers = summary?.QUESTIONS.map((answer: any) => ({
             QUESTION_ID: answer.QUESTION,
             CENTRO_ID: summary.CENTRO_ID,
@@ -67,7 +68,7 @@ function CadastroPage() {
             _id: answer._id,
           }));
         } else {
-          answers = await fetch(apiUrl(`/answers?CENTRO_ID=${centroId}`)).then((res) => res.json());
+          answers = await fetchJsonCached(apiUrl(`/answers?CENTRO_ID=${centroId}`));
         }
 
         const cache: Record<string, any[]> = {};
@@ -105,7 +106,7 @@ function CadastroPage() {
     }
 
     fetchData();
-  }, [centroId]);
+  }, [centroId, queryPage, totalPages, updatePageInUrl, searchParams]);
 
   const handleAnswerChange = async (
     questionId: string,

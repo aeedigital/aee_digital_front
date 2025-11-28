@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Line, Bar } from "react-chartjs-2";
 import { apiUrl } from "@/lib/api";
 
@@ -97,7 +97,7 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
   const [error, setError] = useState<string | null>(null);
 
   // Função para buscar os dados da API
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
 
       console.log("Buscando dados para o gráfico com datas:", { startDate, endDate });
@@ -169,11 +169,11 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, [fetchData]);
 
   if (loading) return <p>Carregando...</p>;
   if (error) return <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>;

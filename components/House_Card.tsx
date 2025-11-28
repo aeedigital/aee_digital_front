@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AiOutlineHistory } from "react-icons/ai";
 
 import { Quiz, Question, Answer, Summary, QuestionAnswer } from '@/interfaces/form.interface';
@@ -44,6 +44,22 @@ const House_Card: React.FC<CardProps> = ({
   const [backgroundColor, setBackgroundColor] = useState<string>('bg-white');
   const [notMetCriterias, setNotMetCriterias] = useState<string[]>([]);
   const [finalizou, setFinalizou] = useState<boolean>(false);
+  const requiredQuestions = useMemo(() => {
+    if (!form) return [];
+    const req: Question[] = [];
+    form.PAGES?.forEach((quiz: { QUIZES: Quiz[] }) => {
+      quiz.QUIZES?.forEach((group) => {
+        group.QUESTIONS?.forEach((questionGroup) => {
+          questionGroup.GROUP?.forEach((q: Question) => {
+            if (q.IS_REQUIRED) {
+              req.push(q);
+            }
+          });
+        });
+      });
+    });
+    return req;
+  }, [form]);
 
   // 1. Busca todas as respostas do centro
   useEffect(() => {
@@ -84,20 +100,7 @@ const House_Card: React.FC<CardProps> = ({
   // 3. Verifica quais perguntas obrigatórias não foram respondidas
   useEffect(() => {
     if (!allAnswers || allAnswers.length === 0) return;
-    if (!form) return;
-
-    const requiredQuestions: Question[] = [];
-    form.PAGES.forEach((quiz: { QUIZES: Quiz[] }) => {
-      quiz.QUIZES.forEach((group) => {
-        group.QUESTIONS.forEach((questionGroup) => {
-          questionGroup.GROUP.forEach((q) => {
-            if (q.IS_REQUIRED) {
-              requiredQuestions.push(q);
-            }
-          });
-        });
-      });
-    });
+    if (!requiredQuestions.length) return;
 
     const notAnswered = requiredQuestions.filter((rq) => {
       const resp = allAnswers.filter((a) => a.QUESTION_ID === rq._id).pop();
@@ -105,10 +108,10 @@ const House_Card: React.FC<CardProps> = ({
     });
 
     setPerguntasFaltantes(notAnswered.map((q) => q.QUESTION));
-  }, [allAnswers, form]);
+  }, [allAnswers, requiredQuestions]);
 
   // Define a cor do Card com base no percentual de questões do coordenador
-  const getBackgroundColor = () => {
+  const getBackgroundColor = useCallback(() => {
     if (!questoesCoordenador || questoesCoordenador.length === 0) {
       return 'bg-white';
     }
@@ -185,11 +188,11 @@ const House_Card: React.FC<CardProps> = ({
       return 'bg-red-200';
     }
  
-  };
+  }, [questoesCoordenador, summaries, finalizou, centro.NOME_CURTO]);
 
   useEffect(() => {
     setBackgroundColor(getBackgroundColor());
-  }, [questoesCoordenador, summaries, finalizou]);
+  }, [getBackgroundColor]);
 
   const handleCardClick = () => {
     router.push(`/cadastro?centroId=${centro._id}`);
