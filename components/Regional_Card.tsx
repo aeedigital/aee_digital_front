@@ -24,39 +24,54 @@ interface CardProps {
 const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) => {
   const [centrosCount, setCentrosCount] = useState<number | null>(null);
   const [finalizadosCount, setFinalizadosCount] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchCentrosCount() {
 
-      const res = await fetch(apiUrl(`/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`));
-      
-      if (!res.ok) {
-        console.error(`Failed to fetch centers for regional ${regionalId}`);
-        return;
+      try {
+        // Usa endpoint de centros por regional para garantir contagem correta
+        const res = await fetch(apiUrl(`/regionais/${regionalId}/centros?STATUS=Pendente,Integrada,Inscrita`), {
+          cache: "no-store",
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to fetch centers for regional ${regionalId} (${res.status})`);
+        }
+
+        const centros = await res.json();
+        const centrosLength = Array.isArray(centros) ? centros.length : 0;
+        setCentrosCount(centrosLength);
+        setLoadError(null);
+
+        let summaryPath = apiUrl(`/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`);
+
+        if (period?.start && period?.end) {
+          summaryPath = appendDatePeriod(summaryPath, period);
+        }
+
+        const summaryRes = await fetch(summaryPath, { cache: "no-store" });
+        if (!summaryRes.ok) {
+          throw new Error(`Failed to fetch summaries for regional ${regionalId} (${summaryRes.status})`);
+        }
+        const data = await summaryRes.json();
+
+        let finalizadosTotal = 0;
+
+        if (Array.isArray(data) && data.length > 0) {
+          const centroIdsSet = new Set(centros.map((centro: any) => centro._id));
+          const uniqueCentroIds = new Set(
+            data.map((item: any) => item.CENTRO_ID).filter((id: any) => centroIdsSet.has(id))
+          );
+          finalizadosTotal = uniqueCentroIds.size;
+        }
+        setFinalizadosCount(finalizadosTotal);
+      } catch (error: any) {
+        console.error("Erro ao carregar dados da regional", regionalId, error);
+        setLoadError(error?.message || "Erro ao carregar dados");
+        setCentrosCount(0);
+        setFinalizadosCount(0);
       }
-
-      const centros = await res.json();
-      setCentrosCount(centros.length);
-
-      let summaryPath = apiUrl(`/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`);
-
-      if (period?.start && period?.end) {
-        summaryPath = appendDatePeriod(summaryPath, period);
-      }
-
-      const summaryRes = await fetch(summaryPath);
-      const data = await summaryRes.json();
-
-      let finalizadosTotal = 0;
-
-      if (data.length > 0) {
-        const centroIdsSet = new Set(centros.map((centro: any) => centro._id));
-        const uniqueCentroIds = new Set(
-          data.map((item: any) => item.CENTRO_ID).filter((id: any) => centroIdsSet.has(id))
-        );
-        finalizadosTotal = uniqueCentroIds.size;
-      }
-      setFinalizadosCount(finalizadosTotal);
     }
 
     fetchCentrosCount();
@@ -93,6 +108,7 @@ const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) 
         <CardDescription>{pais}</CardDescription>
       </CardHeader>
       <CardContent>
+        {loadError && <p className="text-xs text-red-700">Erro: {loadError}</p>}
         <p>Centros: {centrosCount !== null ? centrosCount : 'Carregando...'}</p>
         <p>Finalizados: {finalizadosCount !== null ? finalizadosCount : 'Carregando...'}</p>
       </CardContent>

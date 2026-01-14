@@ -2,7 +2,7 @@
 
 import { useUser } from "@/context/UserContext";
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 
 import { getInitialPage } from '../actions/permitions';
@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { setUser } = useUser();
 
@@ -73,11 +74,16 @@ export default function LoginPage() {
           Cookies.set('scope', scope);
         }
 
-        const initialPage = getInitialPage(role, scope);
-        if (!initialPage) {
-          throw new Error("Página não encontrada");
+        const redirect = searchParams.get("redirect");
+        if (redirect) {
+          router.push(redirect);
+        } else {
+          const initialPage = getInitialPage(role, scope);
+          if (!initialPage) {
+            throw new Error("Página não encontrada");
+          }
+          router.push(initialPage);
         }
-        router.push(initialPage);
       } else {
         setErrorMessage('Usuário ou senha inválidos. Verifique e tente novamente.');
       }
