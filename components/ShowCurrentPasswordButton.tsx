@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 
 import { useUser } from "@/context/UserContext";
 
-export default function ShowCurrentPasswordButton() {
+export default forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
+  function ShowCurrentPasswordButton(_props, ref) {
 
     const { user } = useUser();
 
@@ -32,6 +33,7 @@ export default function ShowCurrentPasswordButton() {
     return (
         <>
             <button
+                ref={ref}
                 onClick={fetchCurrentPassword}
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 w-full text-left"
             >
@@ -66,4 +68,5 @@ export default function ShowCurrentPasswordButton() {
             </AlertDialog>
         </>
     );
-}
+  }
+);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ interface ResetPasswordButtonProps {
   user: User;
 }
 
-export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
+const ResetPasswordButton = forwardRef<HTMLButtonElement, ResetPasswordButtonProps>(
+  function ResetPasswordButton(props, ref) {
 
   const {user, callback} = props;
 
@@ -74,6 +75,7 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
   return (
     <>
       <button
+        ref={ref}
         onClick={(e) => {
           e.preventDefault(); // Evita que o DropdownMenu feche antes da API responder
           handleResetPassword();
@@ -112,4 +114,6 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
       </AlertDialog>
     </>
   );
-}
+});
+
+export default ResetPasswordButton;
