@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import { useUser } from "@/context/UserContext";
 
-const PUBLIC_PATHS = ["/login", "/about", "/logout", "/favicon.ico", "/_not-found"];
+const PUBLIC_PATHS = ["/login", "/about", "/logout", "/respostas", "/favicon.ico", "/_not-found"];
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
