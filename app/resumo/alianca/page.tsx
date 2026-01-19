@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Regional_Card from "@/components/Regional_Card";
-import { Period } from "@/helpers/datePeriodHelper";
+import { Period } from "@/app/helpers/datePeriodHelper";
 import { Regional } from "@/interfaces/centro.interface";
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import SummariesGraphComponent from "@/components/SummariesGraphComponent";

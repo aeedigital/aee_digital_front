@@ -55,6 +55,21 @@ export default function LoginPage() {
       scope
     });
 
+    // Atualiza lastLogged (não bloqueia login se falhar)
+    try {
+      await fetch(apiUrl(`/passes/${userInfo._id}/last-logged-in`), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          lastLogged: new Date().toISOString(),
+        }),
+      });
+    } catch (err) {
+      console.warn("Não foi possível atualizar lastLogged", err);
+    }
+
     return {
         scope,
         role

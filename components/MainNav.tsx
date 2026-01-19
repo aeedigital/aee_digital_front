@@ -14,27 +14,25 @@ type NavItem = {
 const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   admin: [
     { label: "Resumo Aliança", path: "/resumo/alianca" },
-    { label: "Resumo Regional", path: "/resumo/coordenador" },
-    { label: "Credenciais", path: "/resumo/coordenador/credenciais" },
-    { label: "Cadastro", path: "/cadastro" },
     { label: "Pessoas", path: "/pessoas" },
+    { label: "Centros", path: "/centros" },
+    { label: "Usuários", path: "/admin/usuarios" },
     { label: "Respostas públicas", path: "/respostas" },
   ],
   coord_geral: [
     { label: "Resumo Aliança", path: "/resumo/alianca" },
-    { label: "Resumo Regional", path: "/resumo/coordenador" },
-    { label: "Credenciais", path: "/resumo/coordenador/credenciais" },
-    { label: "Cadastro", path: "/cadastro" },
+    { label: "Pessoas", path: "/pessoas" },
+    { label: "Centros", path: "/centros" },
     { label: "Respostas públicas", path: "/respostas" },
   ],
   coord_regional: [
     { label: "Resumo Regional", path: "/resumo/coordenador" },
-    { label: "Credenciais", path: "/resumo/coordenador/credenciais" },
-    { label: "Cadastro", path: "/cadastro" },
+    { label: "Centros", path: "/centros" },
     { label: "Respostas públicas", path: "/respostas" },
   ],
   presidente: [
     { label: "Cadastro", path: "/cadastro" },
+    { label: "Centros", path: "/centros" },
     { label: "Respostas públicas", path: "/respostas" },
   ],
 };
@@ -60,8 +58,9 @@ export default function MainNav() {
   const [open, setOpen] = useState(false);
 
   const navItems = useMemo(() => {
-    if (!user?.role) return [];
-    return NAV_BY_ROLE[user.role] || [];
+    const role = user?.role as UserRole | undefined;
+    if (!role || !(role in NAV_BY_ROLE)) return [];
+    return NAV_BY_ROLE[role];
   }, [user?.role]);
 
   useEffect(() => {
@@ -76,17 +75,16 @@ export default function MainNav() {
       {/* Desktop */}
       <nav className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-sm text-slate-700">
         {navItems.map((item) => {
-          const href = buildHref(item.path, user!.role, user?.scope);
+          const href = buildHref(item.path, user!.role as UserRole, user?.scope);
           const isActive = pathname === item.path;
           return (
             <Link
               key={item.path}
               href={href}
-              className={`px-3 py-1 rounded-full transition ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "hover:bg-white hover:text-slate-900"
-              }`}
+              className={`px-3 py-1 rounded-full transition ${isActive
+                ? "bg-slate-900 text-white shadow-sm"
+                : "hover:bg-white hover:text-slate-900"
+                }`}
             >
               {item.label}
             </Link>
@@ -109,17 +107,16 @@ export default function MainNav() {
           <div className="absolute left-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white shadow-lg z-30">
             <ul className="py-1 text-sm text-slate-800">
               {navItems.map((item) => {
-                const href = buildHref(item.path, user!.role, user?.scope);
+                const href = buildHref(item.path, user!.role as UserRole, user?.scope);
                 const isActive = pathname === item.path;
                 return (
                   <li key={item.path}>
                     <Link
                       href={href}
-                      className={`block px-4 py-2 ${
-                        isActive
-                          ? "bg-slate-900 text-white"
-                          : "hover:bg-slate-100"
-                      }`}
+                      className={`block px-4 py-2 ${isActive
+                        ? "bg-slate-900 text-white"
+                        : "hover:bg-slate-100"
+                        }`}
                     >
                       {item.label}
                     </Link>

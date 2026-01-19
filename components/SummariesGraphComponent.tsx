@@ -155,6 +155,7 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
         labels: ["Faltando", "Respondido"],
         datasets: [
           {
+            label: "Centros",
             data: [pendente, 100 - pendente],
             backgroundColor: ["rgba(255, 99, 132, 0.5)", "rgba(75, 192, 192, 0.5)"],
             borderColor: ["rgba(255, 99, 132, 1)", "rgba(75, 192, 192, 1)"],

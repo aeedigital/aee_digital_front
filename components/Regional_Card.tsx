@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-import { appendDatePeriod, Period } from '@/helpers/datePeriodHelper';
+import { appendDatePeriod, Period } from '@/app/helpers/datePeriodHelper';
 import { apiUrl } from '@/lib/api';
 
 interface CardProps {
