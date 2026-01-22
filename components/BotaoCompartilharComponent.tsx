@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import React from "react";
+import { getCredentialMessage } from "@/app/helpers/getCredentialMessage";
 
 interface BotaoCompartilharProps {
   user: string;
@@ -11,17 +12,7 @@ interface BotaoCompartilharProps {
 export function BotaoCompartilhar({ user, pass }: BotaoCompartilharProps) {
   const handleShare = async () => {
     // Incluímos um contexto na mensagem antes das credenciais
-    const textToShare = `Olá! Seguem as credenciais para acesso:
-
-    O site que tem que acessar é o seguinte : http://162.214.123.133:3000/
-
-    Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
-
-    • Login: ${user}
-    • Senha: ${pass}
-
-    Use-as com cuidado e não compartilhe com terceiros sem autorização.
-    Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`;
+    const textToShare = getCredentialMessage({ user, pass });
 
     if (navigator.share) {
       try {

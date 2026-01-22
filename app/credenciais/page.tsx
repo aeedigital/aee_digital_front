@@ -12,6 +12,7 @@ import { set } from "date-fns";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { createRandomPass } from "@/app/helpers/createRandonPass";
 import { getRandomFakeName } from "@/app/helpers/getRandomFakeName";
+import { getCredentialMessage } from "@/app/helpers/getCredentialMessage";
 
 interface LoginSenha {
   scopeInfo: Centro | Regional;
@@ -184,18 +185,10 @@ function CredenciaisContent() {
                     </td>
                     <td className="p-2 md:p-4 border-b border-gray-200 flex space-x-2 items-center">
                       <BarraDeCompartilhamento
-                        texto={`Olá! Seguem as credenciais para acesso:
-
-                              O site que tem que acessar é o seguinte : http://162.214.123.133:3000/
-
-                              Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
-
-                              • Login: ${info.user}
-                              • Senha: ${info.pass}
-
-                              Use-as com cuidado e não compartilhe com terceiros sem autorização.
-                              Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`
-                            }
+                        texto={getCredentialMessage({
+                          user: info.user,
+                          pass: info.pass,
+                        })}
                       />
                       <button
                         className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 transition-all"
