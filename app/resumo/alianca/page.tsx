@@ -68,25 +68,66 @@ function RegionalList() {
     return <div style={{ color: "red", fontWeight: "bold" }}>Erro ao carregar regionais: {error}</div>;
   }
 
+  const parseDate = (value?: string) => {
+    if (!value) return null;
+    // suporta ISO ou formato dd/MM/yyyy usado em getCadastroInfo
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      const [d, m, y] = value.split("/").map(Number);
+      return new Date(Date.UTC(y, m - 1, d));
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const formatDate = (value?: string) => {
+    const date = parseDate(value);
+    if (!date) return null;
+    return date.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  };
+
+  const formattedPeriod =
+    period && (period.start || period.end)
+      ? `${formatDate(period.start) || "início não definido"} até ${
+          formatDate(period.end) || "sem data de término"
+        }`
+      : null;
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-      {period && <SummariesGraphComponent startDate={period.start} endDate={period.end} />}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {formattedPeriod && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: "8px",
+            background: "#f0f4ff",
+            color: "#1f2a44",
+            fontWeight: 600,
+            border: "1px solid #d6e0ff",
+          }}
+        >
+          Período de avaliação: {formattedPeriod}
+        </div>
+      )}
 
-      {loading && Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+        {period && <SummariesGraphComponent startDate={period.start} endDate={period.end} />}
 
-      {noRegionais && <div style={{ color: "#444", fontWeight: "bold" }}>Nenhuma regional retornada pela API.</div>}
+        {loading && Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)}
 
-      {!loading &&
-        !noRegionais &&
-        regionais.map((regional, index) => (
-          <Regional_Card
-            key={regional._id || regional.NOME_REGIONAL || index}
-            nome={regional.NOME_REGIONAL}
-            pais={regional.PAIS}
-            regionalId={regional._id}
-            period={period}
-          />
-        ))}
+        {noRegionais && <div style={{ color: "#444", fontWeight: "bold" }}>Nenhuma regional retornada pela API.</div>}
+
+        {!loading &&
+          !noRegionais &&
+          regionais.map((regional, index) => (
+            <Regional_Card
+              key={regional._id || regional.NOME_REGIONAL || index}
+              nome={regional.NOME_REGIONAL}
+              pais={regional.PAIS}
+              regionalId={regional._id}
+              period={period}
+            />
+          ))}
+      </div>
     </div>
   );
 }

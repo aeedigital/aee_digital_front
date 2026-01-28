@@ -131,7 +131,16 @@ function MainPage() {
       let autoavaliacaoQuestion = avaliacaoCategory.QUESTIONS[0].GROUP[0];
       let questoes = coord_quiz.QUESTIONS[0].GROUP;
 
-      setCoordenadores(pessoasData);
+      const uniqueCoordenadores = Array.from(
+        new Map(
+          (pessoasData || []).map((p: Pessoa) => [
+            (p.NOME || "").trim().toLowerCase() || p._id,
+            p,
+          ])
+        ).values()
+      ).sort((a, b) => (a.NOME || "").localeCompare(b.NOME || ""));
+
+      setCoordenadores(uniqueCoordenadores);
 
       setAvaliacaoQuestion(autoavaliacaoQuestion);
       setCoordenadorQuestoes(questoes);
@@ -323,6 +332,7 @@ function MainPage() {
             totalRespostas={totalRespostas}
             totalCentros={totalCentros}
             regionalId={regionalId}
+            regionalName={regionalInfo?.NOME_REGIONAL}
           />
 
           <div style={{ display: "flex", flexWrap: "wrap" }}>

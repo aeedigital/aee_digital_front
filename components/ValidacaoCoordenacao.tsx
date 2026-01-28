@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import {Skeleton} from "@/components/ui/skeleton";
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,9 +10,10 @@ interface ValidacaoCoordenacaoProps {
   totalRespostas: number;
   totalCentros: number;
   regionalId: string;
+  regionalName?: string;
 }
 
-export default function ValidacaoCoordenacao({ coordenador, totalRespostas, totalCentros, regionalId }: ValidacaoCoordenacaoProps) {
+export default function ValidacaoCoordenacao({ coordenador, totalRespostas, totalCentros, regionalId, regionalName }: ValidacaoCoordenacaoProps) {
   const [currentTotalRespostas, setCurrentTotalRespostas] = useState(totalRespostas);
   const [currentTotalCentros, setCurrentTotalCentros] = useState(totalCentros);
 
@@ -45,14 +45,12 @@ export default function ValidacaoCoordenacao({ coordenador, totalRespostas, tota
                 <span className="text-gray-600 font-medium">Total Centros:</span>
                 <span className="text-gray-800 font-semibold">{currentTotalCentros}</span>
               </div>
-              <div>
-              <div style={{ marginTop: '1rem' }}>
-              <Button asChild variant="default">
-                <Link href={`/credenciais?scope_id=${regionalId}&scope=centro`}>
-                  Ver Logins e Senhas
-                </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button asChild variant="default">
+                  <Link href={`/credenciais?scope_id=${regionalId}&scope=centro`}>
+                    Ver Logins e Senhas
+                  </Link>
                 </Button>
-              </div>
               </div>
         </CardContent>
       </Card>
