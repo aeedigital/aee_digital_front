@@ -15,6 +15,7 @@ import { apiUrl } from '@/lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/context/UserContext";
 import CentroDialog from '@/components/CreateCentro';
+import { LoadingPlaceholder } from "@/components/LoadingPlaceholder";
 
 const SkeletonCard = () => (
   <div style={{ width: "300px", height: "200px", margin: "10px", background: "#e0e0e0", borderRadius: "8px", animation: "pulse 1.5s infinite" }} />
@@ -31,7 +32,7 @@ async function safeJson(response: Response) {
 
 export default function ResumoCoordenadorWrapper() {
   return (
-    <Suspense fallback={<div>Carregando regional...</div>}>
+    <Suspense fallback={<LoadingPlaceholder message="Carregando regional..." lines={4} />}>
       <MainPage />
     </Suspense>
   );

@@ -17,6 +17,7 @@ import {
     Legend,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
+import { LoadingPlaceholder } from "@/components/LoadingPlaceholder";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -181,7 +182,7 @@ export default function AdminUsersPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="text-lg text-slate-600">Carregando...</div>
+                <LoadingPlaceholder message="Carregando usuários..." lines={4} />
             </div>
         );
     }

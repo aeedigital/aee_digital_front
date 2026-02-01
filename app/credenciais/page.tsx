@@ -9,6 +9,7 @@ import { BarraDeCompartilhamento } from "@/components/BarraCompartilhamento";
 import { Centro, Regional } from "@/interfaces/centro.interface";
 import { Pass } from "@/interfaces/auth.interface";
 import { set } from "date-fns";
+import { LoadingPlaceholder } from "@/components/LoadingPlaceholder";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { createRandomPass } from "@/app/helpers/createRandonPass";
 import { getRandomFakeName } from "@/app/helpers/getRandomFakeName";
@@ -24,7 +25,7 @@ interface LoginSenha {
 
 export default function CredenciaisPage() {
   return (
-    <Suspense fallback={<p>Carregando credenciais...</p>}>
+    <Suspense fallback={<LoadingPlaceholder message="Carregando credenciais..." lines={3} />}>
       <CredenciaisContent />
     </Suspense>
   );

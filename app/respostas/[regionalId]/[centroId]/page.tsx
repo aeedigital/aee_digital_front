@@ -56,7 +56,7 @@ export async function generateStaticParams() {
 }
 
 async function fetchJson<T>(path: string) {
-  const response = await fetch(apiUrl(path));
+  const response = await fetch(apiUrl(path), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Falha ao buscar ${path} (${response.status})`);
   }
@@ -156,9 +156,10 @@ export default async function PublicCentroRespostas({ params }: Params) {
     [regional, centro, form, answers] = await Promise.all([
       fetchJson<Regional>(`/regionais/${regionalId}`),
       fetchJson<Centro>(`/centros/${centroId}`),
-      fetchJson<Form[]>(formPath).then((forms) =>
-        forms && forms.length ? forms[0] : null
-      ),
+      fetchJson<Form[]>(formPath).then((forms) => {
+        if (!forms) return null;
+        return Array.isArray(forms) ? (forms.length ? forms[0] : null) : (forms as unknown as Form);
+      }),
       fetchJson<AnswerWithDates[]>(`/answers?CENTRO_ID=${centroId}`),
     ]);
   } catch (error) {
@@ -217,3 +218,4 @@ export default async function PublicCentroRespostas({ params }: Params) {
     </div>
   );
 }
+export const revalidate = 0;

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useMemo, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPlaceholder } from "@/components/LoadingPlaceholder";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
 import { Answer, Page } from "@/interfaces/form.interface";
@@ -11,7 +12,7 @@ import { fetchJsonCached } from "@/lib/fetchWithCache";
 
 export default function CadastroPageWrapper() {
   return (
-    <Suspense fallback={<div>Carregando cadastro...</div>}>
+    <Suspense fallback={<LoadingPlaceholder message="Carregando cadastro..." lines={4} />}>
       <CadastroPage />
     </Suspense>
   );

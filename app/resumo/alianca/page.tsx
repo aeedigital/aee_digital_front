@@ -130,7 +130,7 @@ function RegionalList() {
         </div>
       )}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", width: "100%" }}>
         {period && <SummariesGraphComponent startDate={period.start} endDate={period.end} />}
 
         {loading && Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)}

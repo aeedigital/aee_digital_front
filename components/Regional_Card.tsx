@@ -66,41 +66,42 @@ const Regional_Card: React.FC<CardProps> = ({
 
   return (
     <Card
-      className={`cursor-pointer border-2 border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-shadow ${getBackgroundColor}`}
+      className={`w-72 min-h-[190px] cursor-pointer border border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-shadow ${getBackgroundColor}`}
       onClick={handleCardClick}
     >
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-bold text-gray-800">{nome}</CardTitle>
-        <CardDescription className="text-sm text-gray-600">{pais}</CardDescription>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold text-gray-900">{nome}</CardTitle>
+        <CardDescription className="text-sm text-gray-700">{pais}</CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-3">
-        {/* Número grande de finalizados */}
         <div className="flex items-baseline justify-between">
-          <span className="text-3xl font-bold text-gray-900">{finalizadosCount}</span>
-          <span className="text-sm text-gray-500">de {centrosCount}</span>
+          <span className="text-2xl font-bold text-gray-900">{finalizadosCount}</span>
+          <span className="text-sm text-gray-600">de {centrosCount}</span>
         </div>
 
-        {/* Barra de progresso */}
-        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div
             className={`h-full ${getProgressColor} transition-all duration-300`}
             style={{ width: `${percentage}%` }}
           ></div>
         </div>
 
-        {/* Percentual e status */}
-        <div className="flex justify-between items-center">
-          <span className="font-semibold text-gray-700">{percentage}% concluído</span>
-          <span className="text-xs px-2 py-1 bg-gray-200 rounded-full text-gray-700">
+        <div className="flex justify-between items-center text-sm text-gray-700">
+          <span className="font-semibold">{percentage}% concluído</span>
+          <span className="px-2 py-1 bg-white/70 border border-gray-200 rounded-full text-xs">
             {finalizadosCount === 0 && "Pendente"}
             {finalizadosCount > 0 && finalizadosCount < centrosCount && "Progresso"}
             {finalizadosCount >= centrosCount && "Completo"}
           </span>
         </div>
+
+        {period?.start && period?.end && (
+          <p className="text-xs text-gray-600">{period.start} → {period.end}</p>
+        )}
+
+        <p className="text-xs text-gray-500">Clique para detalhes.</p>
       </CardContent>
-      <CardFooter className="text-xs text-gray-500">
-        Clique para detalhes
-      </CardFooter>
     </Card>
   );
 };

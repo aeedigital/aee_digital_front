@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+export const revalidate = 0;
+
 import type { Centro, Regional } from "@/interfaces/centro.interface";
 import { apiFetch, apiUrl } from "@/lib/api";
 
@@ -27,7 +29,7 @@ export async function generateStaticParams() {
 }
 
 async function fetchJson<T>(path: string) {
-  const response = await fetch(apiUrl(path));
+  const response = await fetch(apiUrl(path), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Falha ao buscar ${path} (${response.status})`);
   }

@@ -5,6 +5,7 @@ import { Centro, Regional } from '@/interfaces/centro.interface';
 import { apiFetch } from '@/lib/api';
 import CentrosListComponent from '@/components/CentrosListComponent';
 import CentrosFilterComponent, { FilterCriteria } from '@/components/CentrosFilterComponent';
+import { LoadingPlaceholder } from '@/components/LoadingPlaceholder';
 
 type SortField = 'NOME_CENTRO' | 'NOME_CURTO' | 'REGIONAL' | 'CNPJ_CENTRO' | 'ENDERECO' | 'CIDADE' | 'DATA_FUNDACAO' | 'STATUS';
 type SortDirection = 'asc' | 'desc';
@@ -128,7 +129,7 @@ export default function CentrosPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="text-lg text-slate-600">Carregando centros...</div>
+                <LoadingPlaceholder message="Carregando centros..." lines={4} />
             </div>
         );
     }
