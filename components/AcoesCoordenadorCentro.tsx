@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Eye, History, CheckCircle } from "lucide-react";
 import { CoordAnalisisButton } from "@components/CoordAnalisisButton";
-import { QuestionAnswer } from "@/interfaces/form.interface";
+import { QuestionAnswer, Summary } from "@/interfaces/form.interface";
 
 interface AcoesCentroProps {
   onVerRespostas: () => void;
@@ -10,10 +10,11 @@ interface AcoesCentroProps {
   centroId: string;
   coordQuestionsAnswered: QuestionAnswer[];
   hasSummary: boolean;
+  summaries?: Summary[];
 }
 
 export function AcoesCoordenadorCentro({ onVerRespostas, onVerHistorico, onFinalizarAnalise, centroId, coordQuestionsAnswered,
-  hasSummary }: AcoesCentroProps) {
+  hasSummary, summaries }: AcoesCentroProps) {
   return (
     <div className="flex flex-wrap gap-4 p-4 w-full">
       {/* Botão Ver Respostas */}
@@ -40,6 +41,7 @@ export function AcoesCoordenadorCentro({ onVerRespostas, onVerHistorico, onFinal
         coordQuestionAnswered={coordQuestionsAnswered}
         centroId={centroId}
         hasSummary={hasSummary}
+        summaries={summaries}
       />
     </div>
   );

@@ -60,7 +60,9 @@ function CadastroPage() {
         let answers;
 
         if (summaryId) {
-          const summary = await fetchJsonCached(apiUrl(`/summaries/${summaryId}`));
+          const summary = await fetch(apiUrl(`/summaries/${summaryId}`), { cache: "no-store" }).then((r) =>
+            r.json()
+          );
           answers = summary?.QUESTIONS.map((answer: any) => ({
             QUESTION_ID: answer.QUESTION,
             CENTRO_ID: summary.CENTRO_ID,
@@ -68,7 +70,9 @@ function CadastroPage() {
             _id: answer._id,
           }));
         } else {
-          answers = await fetchJsonCached(apiUrl(`/answers?CENTRO_ID=${centroId}`));
+          answers = await fetch(apiUrl(`/answers?CENTRO_ID=${centroId}`), { cache: "no-store" }).then((r) =>
+            r.json()
+          );
         }
 
         const cache: Record<string, any[]> = {};

@@ -4,10 +4,9 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import House_Card from '@/components/House_Card';
-import { Question, Summary} from '@/interfaces/form.interface'
+import { Question, Summary, Answer } from '@/interfaces/form.interface'
 import ValidacaoCoordenacao from '@/components/ValidacaoCoordenacao';
 import { getCadastroInfo } from "@/app/actions/cadastroInfo";
-import { appendDatePeriod, Period } from '@/app/helpers/datePeriodHelper';
 import { Centro } from '@/interfaces/centro.interface';
 import { Pessoa } from '@/interfaces/pessoas.interface';
 import { apiUrl } from '@/lib/api';
@@ -40,7 +39,7 @@ export default function ResumoCoordenadorWrapper() {
 
 function MainPage() {
   const searchParams = useSearchParams();
-  const regionalId = searchParams.get('regionalId');
+  const regionalId = searchParams.get('regionalId') || searchParams.get('regionalid') || searchParams.get('regionalID');
 
   const { user } = useUser();
 
@@ -49,25 +48,27 @@ function MainPage() {
   const [coordenadores, setCoordenadores] = useState<Pessoa[]>([]);
   const [selectedCoordenador, setSelectedCoordenador] = useState<string | undefined>("");
   const [regionalInfo, setRegionalInfo] = useState<any>({});
+  const [periodLabel, setPeriodLabel] = useState<string | null>(null);
 
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
   const [summaryByCentroId, setSummaryByCentroId] = useState<{ [key: string]: any }>({});
-  
+  const [answersByCentroId, setAnswersByCentroId] = useState<{ [key: string]: Answer[] }>({});
+
   const hasLoadedRef = useRef(false); // Use useRef instead of useState
-  const [avaliacaoQuestion, setAvaliacaoQuestion] = useState<Question >({
+  const [avaliacaoQuestion, setAvaliacaoQuestion] = useState<Question>({
     _id: "",
-  QUESTION: "",
-  ANSWER_TYPE: "String",
-  IS_REQUIRED: false,
-  PRESET_VALUES: []
+    QUESTION: "",
+    ANSWER_TYPE: "String",
+    IS_REQUIRED: false,
+    PRESET_VALUES: []
   })
-  const [questoes_coordenador, setCoordenadorQuestoes]= useState<Question[]>([{
+  const [questoes_coordenador, setCoordenadorQuestoes] = useState<Question[]>([{
     _id: "",
-  QUESTION: "",
-  ANSWER_TYPE: "String",
-  IS_REQUIRED: false,
-  PRESET_VALUES: []
+    QUESTION: "",
+    ANSWER_TYPE: "String",
+    IS_REQUIRED: false,
+    PRESET_VALUES: []
   }])
   const [formulario, setFormulario] = useState({})
 
@@ -78,21 +79,7 @@ function MainPage() {
   });
   const canExport = !loading && centros.length > 0;
 
-  function findQuestionByCategory(form: any, category: string) {
-
-    // Iterar sobre as páginas
-    for (const page of form.PAGES) {
-      // Iterar sobre os quizzes em cada página
-      for (const quiz of page.QUIZES) {
-        if (quiz.CATEGORY === category) {
-          // Se a categoria corresponder, procurar pela questão
-          return quiz;
-        }
-      }
-    }
-  }
-
-  useEffect(()=>{
+  useEffect(() => {
     async function fetchData() {
 
       if (hasLoadedRef.current || !regionalId) {
@@ -103,82 +90,131 @@ function MainPage() {
 
       const cadastroInfo = await getCadastroInfo();
 
-      let summariesPath = apiUrl(`/regionais/${regionalId}/summaries`);
+      // Converter datas do formato brasileiro para ISO
+      const convertDateToISOFormat = (date: string): string => {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+          const [d, m, y] = date.split("/");
+          return `${y}-${m}-${d}`;
+        }
+        return date;
+      };
 
-      if (cadastroInfo?.start && cadastroInfo?.end) {
-        summariesPath = appendDatePeriod(summariesPath, { start: cadastroInfo.start, end: cadastroInfo.end });
+      const formatDateLabel = (date: string | undefined) => {
+        if (!date) return null;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) return date;
+        const parsed = new Date(date);
+        return Number.isNaN(parsed.getTime())
+          ? null
+          : parsed.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+      };
+
+      const dateFromISO = cadastroInfo?.start ? convertDateToISOFormat(cadastroInfo.start) : undefined;
+      const dateToISO = cadastroInfo?.end ? convertDateToISOFormat(cadastroInfo.end) : undefined;
+      const startLabel = formatDateLabel(cadastroInfo?.start || dateFromISO);
+      const endLabel = formatDateLabel(cadastroInfo?.end || dateToISO);
+      setPeriodLabel(
+        startLabel || endLabel
+          ? `${startLabel || "Início não definido"} até ${endLabel || "sem término"}`
+          : null
+      );
+
+      const params = new URLSearchParams();
+      if (dateFromISO) params.append("dateFrom", dateFromISO);
+      if (dateToISO) params.append("dateTo", dateToISO);
+      params.append("include", "answers,summaries");
+      params.append("limitSummaries", "1");
+
+      const extractFormQuestions = (formObj: any) => {
+
+
+        console.log("Extracting form questions from formObj:", formObj);
+
+        if (!formObj) return { autoavaliacaoQuestion: undefined, questoes: [] as Question[] };
+        const pages = formObj?.PAGES || [];
+        let autoavaliacaoQuestion: Question | undefined;
+        let questoes: Question[] = [];
+
+        for (const page of pages) {
+          const quizAutoAvaliacao = page.QUIZES?.find((q: any) => q.CATEGORY === "Auto Avaliação");
+          const quizCoordenador = page.QUIZES?.find((q: any) => q.CATEGORY === "Coordenador");
+
+          if (quizAutoAvaliacao?.QUESTIONS?.[0]?.GROUP?.[0]) {
+            autoavaliacaoQuestion = quizAutoAvaliacao.QUESTIONS[0].GROUP[0];
+          }
+
+          if (quizCoordenador?.QUESTIONS?.[0]?.GROUP) {
+            questoes = quizCoordenador.QUESTIONS[0].GROUP;
+          }
         }
 
-      let [regionalData, centrosData, summariesData, formData, pessoasData] = await Promise.all([
-        fetch(apiUrl(`/regionais/${regionalId}`)).then(safeJson),
-        fetch(apiUrl(`/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`)).then(safeJson),
-        fetch(summariesPath).then(safeJson),
-        fetch(apiUrl(`/forms?_id=${cadastroInfo.formId}`)).then(safeJson),
-        fetch(apiUrl(`/pessoas`)).then(safeJson)
-      ])
+        return { autoavaliacaoQuestion, questoes };
+      };
 
-      const coordenador = regionalData?.COORDENADOR_ID
-        ? await fetch(apiUrl(`/pessoas/${regionalData.COORDENADOR_ID}`)).then(safeJson)
-        : null;
-
-      const form = formData[0]
-
-      setFormulario(form)
-      const avaliacaoCategory = findQuestionByCategory(form, "Auto Avaliação")
-      let coord_quiz = findQuestionByCategory(form,"Coordenador");
+      try {
+        const centrosWithAnswersUrl = params.toString()
+          ? apiUrl(`/regionais/${regionalId}/centros-with-answers?${params.toString()}`)
+          : apiUrl(`/regionais/${regionalId}/centros-with-answers`);
 
 
-      let autoavaliacaoQuestion = avaliacaoCategory.QUESTIONS[0].GROUP[0];
-      let questoes = coord_quiz.QUESTIONS[0].GROUP;
+        console.log("CadastroInfo", cadastroInfo, `/forms?_id=${cadastroInfo.formId}`);
 
-      const uniqueCoordenadores = Array.from(
-        new Map(
-          (pessoasData || []).map((p: Pessoa) => [
-            (p.NOME || "").trim().toLowerCase() || p._id,
-            p,
-          ])
-        ).values()
-      ).sort((a, b) => (a.NOME || "").localeCompare(b.NOME || ""));
+        const [regionalData, formData, pessoasData, centrosWithAnswers] = await Promise.all([
+          fetch(apiUrl(`/regionais/${regionalId}`)).then(safeJson),
+          fetch(apiUrl(`/forms/${cadastroInfo.formId}`)).then(safeJson),
+          fetch(apiUrl(`/pessoas`)).then(safeJson),
+          fetch(centrosWithAnswersUrl).then(safeJson),
+        ]);
 
-      setCoordenadores(uniqueCoordenadores);
+        console.log("Fetched form data:", formData);
 
-      setAvaliacaoQuestion(autoavaliacaoQuestion);
-      setCoordenadorQuestoes(questoes);
+        const form = Array.isArray(formData) ? formData[0] : formData;
+        setFormulario(form);
 
-      setSelectedCoordenador(coordenador?.NOME ?? "");
-      setCentros(centrosData);
-      setRegionalInfo(regionalData);
+        // Extrair questões; se faltar, tenta fallback no formulário original
+        let { autoavaliacaoQuestion, questoes } = extractFormQuestions(form);
 
-      summariesData.sort((a: any, b: any) => {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
+        setCoordenadores(Array.isArray(pessoasData) ? pessoasData : []);
 
-      const UniqueSummariesDataByCentroId = summariesData.reduce((acc: any, summary: any) => {
-        if (!acc[summary.CENTRO_ID]) {
-          acc[summary.CENTRO_ID] = summary;
+        if (autoavaliacaoQuestion) {
+          setAvaliacaoQuestion(autoavaliacaoQuestion);
         }
-        return acc;
-      }, {});
+        setCoordenadorQuestoes(questoes && questoes.length ? questoes : []);
 
-      const summaries: { [key: string]: any[] } = {};
-      for (const summary of summariesData) {
-        if (!summaries[summary.CENTRO_ID]) {
-          summaries[summary.CENTRO_ID] = [];
+        const coordenadorPessoa = Array.isArray(pessoasData)
+          ? pessoasData.find((p: Pessoa) => p._id === regionalData?.COORDENADOR_ID)
+          : undefined;
+        setSelectedCoordenador(coordenadorPessoa?.NOME ?? "");
+        const centros = centrosWithAnswers?.centros || [];
+        setCentros(centros);
+        setRegionalInfo(regionalData || {});
+
+        // Processar summaries e answers em mapa por centro
+        const summariesBycentro: { [key: string]: any[] } = {};
+        const answersBycentro: { [key: string]: Answer[] } = {};
+        for (const centro of centros) {
+          const cid = centro._id;
+          summariesBycentro[cid] = centro.summaries || [];
+          answersBycentro[cid] = centro.answers || [];
         }
-        summaries[summary.CENTRO_ID].push(summary);
+
+        setSummaryByCentroId(summariesBycentro);
+        setAnswersByCentroId(answersBycentro);
+
+        const centrosComSummaries = Object.values(summariesBycentro).filter((arr) => arr.length > 0).length;
+        setTotalRespostas(centrosComSummaries);
+        setTotalCentros(centros.length || 0);
+
+        setLoading(false); // Finaliza o estado de carregamento
+
+      } catch (error) {
+        console.error("Erro ao buscar dados da regional:", error);
+        setLoading(false);
       }
-
-      setSummaryByCentroId(summaries);
-
-      setTotalRespostas(Object.keys(UniqueSummariesDataByCentroId).length);
-      setTotalCentros(centrosData.length);
-
-      setLoading(false); // Finaliza o estado de carregamento
 
     }
 
     fetchData();
-  },[regionalId])
+  }, [regionalId])
 
 
   function handleCentroCreated(newCentro: Centro) {
@@ -186,25 +222,25 @@ function MainPage() {
     setTotalCentros(prev => prev + 1);
   }
 
-  async function UpdateCoordinator(nameCoordinator: string){
+  async function UpdateCoordinator(nameCoordinator: string) {
     try {
       if (!regionalId) {
         throw new Error("Regional não informada");
       }
 
-      let coordenador: Pessoa|undefined = coordenadores.find((coordenador: Pessoa) => coordenador.NOME === nameCoordinator);
+      let coordenador: Pessoa | undefined = coordenadores.find((coordenador: Pessoa) => coordenador.NOME === nameCoordinator);
       const coordenadorId = coordenador?._id;
 
       const response = await fetch(apiUrl(`/regionais/${regionalId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({COORDENADOR_ID: coordenadorId}),
+        body: JSON.stringify({ COORDENADOR_ID: coordenadorId }),
       });
       const data = await response.json();
       console.log("data", data)
 
       setSelectedCoordenador(coordenador?.NOME);
-      
+
     } catch (error) {
       console.log("Erro ao atualizar coordenador", error)
       throw new Error("Erro ao atualizar coordenador")
@@ -269,24 +305,18 @@ function MainPage() {
   };
 
   return (
-    <div>
+    <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto space-y-4">
       {!regionalId ? (
-        <div>Selecione uma regional para visualizar os dados.</div>
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-600">
+          Selecione uma regional para visualizar os dados.
+        </div>
       ) : loading ? (
-        <div>
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button
-              onClick={exportLatestSummaries}
-              disabled={!canExport}
-              className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
-            >
-              Exportar últimos resumos (CSV)
-            </button>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="h-10 w-44 bg-gray-200 rounded" />
+            <div className="h-10 w-56 bg-gray-200 rounded" />
           </div>
-          <div style={{ marginBottom: "20px" }}>
-            <SkeletonCard />
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap" }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Array.from({ length: 4 }).map((_, idx) => (
               <SkeletonCard key={idx} />
             ))}
@@ -294,58 +324,77 @@ function MainPage() {
         </div>
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button
-              onClick={exportLatestSummaries}
-              disabled={!canExport}
-              className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
-            >
-              Exportar últimos resumos (CSV)
-            </button>
-            {user?.role === "admin" && (
-              <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
-            )}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p className="text-sm uppercase tracking-wide text-gray-500">Regional</p>
+                <h2 className="text-xl font-semibold text-gray-900">{regionalInfo?.NOME_REGIONAL || "—"}</h2>
+                {periodLabel && <p className="text-sm text-gray-600 mt-1">Período: {periodLabel}</p>}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={exportLatestSummaries}
+                  disabled={!canExport}
+                  className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
+                >
+                  Exportar últimos resumos (CSV)
+                </button>
+                {user?.role === "admin" && (
+                  <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
+                )}
+              </div>
+            </div>
           </div>
-           <ValidacaoCoordenacao
+
+          <ValidacaoCoordenacao
             coordenador={
               user?.role === "admin" ? (
-                  <Select
-                    value={selectedCoordenador}
-                    onValueChange={(newValue) => {
-                      console.log("newValue", newValue)
-                      UpdateCoordinator(newValue)
-                    }}
-                    disabled={false}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma opção" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {coordenadores.map((coordenador) => (
-                        <SelectItem key={coordenador._id} value={coordenador.NOME}>
-                          {coordenador.NOME}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>)
-        : (selectedCoordenador)}
+                <Select
+                  value={selectedCoordenador}
+                  onValueChange={(newValue) => {
+                    UpdateCoordinator(newValue);
+                  }}
+                  disabled={false}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um coordenador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coordenadores.map((coordenador) => (
+                      <SelectItem key={coordenador._id} value={coordenador.NOME}>
+                        {coordenador.NOME}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                selectedCoordenador
+              )
+            }
             totalRespostas={totalRespostas}
             totalCentros={totalCentros}
             regionalId={regionalId}
             regionalName={regionalInfo?.NOME_REGIONAL}
           />
 
-          <div style={{ display: "flex", flexWrap: "wrap" }}>
-            {centros.map((centro: Centro) => (
-              <House_Card
-                key={centro._id}
-                centro={centro}
-                avaliacao_question={avaliacaoQuestion}
-                coordenador_questions={questoes_coordenador}
-                form={formulario}
-                summaries = {summaryByCentroId[centro._id]}
-              />
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {centros.length === 0 ? (
+              <div className="col-span-full rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-600">
+                Nenhum centro encontrado para esta regional.
+              </div>
+            ) : (
+              centros.map((centro: Centro) => (
+                <House_Card
+                  key={centro._id}
+                  centro={centro}
+                  avaliacao_question={avaliacaoQuestion}
+                  coordenador_questions={questoes_coordenador}
+                  form={formulario}
+                  summaries={summaryByCentroId[centro._id]}
+                  answers={answersByCentroId[centro._id]}
+                />
+              ))
+            )}
           </div>
         </>
       )}

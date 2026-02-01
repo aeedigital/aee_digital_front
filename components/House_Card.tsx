@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AiOutlineHistory } from "react-icons/ai";
+import { FiAlertTriangle, FiCheckCircle } from "react-icons/fi";
 
 import { Quiz, Question, Answer, Summary, QuestionAnswer } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
@@ -25,6 +25,7 @@ interface CardProps {
   required_questions?: string[];
   form: any;
   summaries: Summary[];
+  answers?: Answer[];
 }
 
 const House_Card: React.FC<CardProps> = ({
@@ -33,7 +34,21 @@ const House_Card: React.FC<CardProps> = ({
   coordenador_questions,
   form,
   summaries,
+  answers,
 }) => {
+
+  // cache por centro para evitar múltiplas chamadas /answers
+  const answersCache = useMemo(() => {
+    if (typeof window === "undefined") return new Map<string, Promise<Answer[]>>();
+    const key = "__answersCache__";
+    // @ts-ignore
+    if (!window[key]) {
+      // @ts-ignore
+      window[key] = new Map<string, Promise<Answer[]>>();
+    }
+    // @ts-ignore
+    return window[key] as Map<string, Promise<Answer[]>>;
+  }, []);
 
   const router = useRouter();
 
@@ -61,23 +76,41 @@ const House_Card: React.FC<CardProps> = ({
     return req;
   }, [form]);
 
-  // 1. Busca todas as respostas do centro
+  // 1. Respostas: prioriza prop "answers"; senão, busca com cache por centro
   useEffect(() => {
     async function fetchAllAnswers() {
       try {
-        let path = apiUrl(`/answers?CENTRO_ID=${centro._id}`);
-        const res = await fetch(path);
-        const data = await res.json();
-        setAllAnswers(data);
+        const key = centro._id;
+        const path = apiUrl(`/answers?CENTRO_ID=${centro._id}`);
+
+        if (!answersCache.has(key)) {
+          const promise = fetch(path).then((res) => res.json());
+          answersCache.set(key, promise);
+        }
+
+        const data = await answersCache.get(key);
+        setAllAnswers(data || []);
       } catch (error) {
         console.error('Erro ao buscar as respostas', error);
       }
     }
 
+    if (answers) {
+      setAllAnswers(answers);
+      answersCache.set(centro._id, Promise.resolve(answers));
+      return;
+    }
+
     if (centro?._id) {
       fetchAllAnswers();
     }
-  }, [centro?._id]);
+  }, [centro?._id, answers, answersCache]);
+
+  // Mantém cache sincronizado após edições locais
+  useEffect(() => {
+    if (!centro?._id) return;
+    answersCache.set(centro._id, Promise.resolve(allAnswers));
+  }, [allAnswers, centro?._id, answersCache]);
 
   // 2. Assim que tivermos todas as respostas, define situacao e preenche questões do coordenador
   useEffect(() => {
@@ -240,19 +273,14 @@ const House_Card: React.FC<CardProps> = ({
   };
 
   return (
-    <Card
-      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg p-4 ${backgroundColor}`}
-    >
-      <CardHeader>
-        <CardTitle>{centro.NOME_CENTRO}</CardTitle>
-        <CardDescription>
-          {centro.NOME_CURTO} {centro.data_avaliacao}
-        </CardDescription>
+    <Card className={`m-2 w-72 border border-gray-300 rounded-lg shadow-md p-4 ${backgroundColor}`}>
+      <CardHeader className="p-0 mb-3">
+        <CardTitle className="text-base font-semibold leading-snug">{centro.NOME_CENTRO}</CardTitle>
+        <CardDescription className="text-sm text-gray-700">{centro.NOME_CURTO || "—"}</CardDescription>
       </CardHeader>
 
-      <CardContent>
-        {/* Aqui, envolvemos o input em um contêiner com fundo branco para não "herdar" a cor do Card */}
-        <div className=" p-2 rounded">
+      <CardContent className="p-0 space-y-3">
+        <div>
           <p className="font-semibold mb-1">Avaliação:</p>
           <FormInput
             type="text"
@@ -264,63 +292,69 @@ const House_Card: React.FC<CardProps> = ({
           />
         </div>
 
-        {/* Fazemos o mesmo para as questões do coordenador */}
-        {questoesCoordenador.map((questionAnswered, index) => (
-          <div key={index} className=" p-2 mt-2 rounded">
-            <QuestionComponent
-              centroId={centro._id}
-              answer={
-                questionAnswered.answer || {
-                  _id: '',
-                  QUESTION_ID: '',
-                  ANSWER: '',
-                  CENTRO_ID: '',
-                  QUIZ_ID: ''
-                }
-              }
-              placeholder="Não respondido"
-              question={questionAnswered.question}
-              questionIndex={index}
-              onAnswerChange={handleAnswerChange}
-            />
-          </div>
-        ))}
+        <div>
+          <p className="font-semibold mb-1">Perguntas do coordenador</p>
+          {questoesCoordenador.length === 0 ? (
+            <p className="text-sm text-gray-700">Nenhuma pergunta configurada.</p>
+          ) : (
+            questoesCoordenador.map((questionAnswered, index) => (
+              <div key={`${questionAnswered.question?._id || index}-${index}`} className="mt-2">
+                <QuestionComponent
+                  centroId={centro._id}
+                  answer={
+                    questionAnswered.answer || {
+                      _id: '',
+                      QUESTION_ID: '',
+                      ANSWER: '',
+                      CENTRO_ID: '',
+                      QUIZ_ID: ''
+                    }
+                  }
+                  placeholder="Não respondido"
+                  question={questionAnswered.question}
+                  questionIndex={index}
+                  onAnswerChange={handleAnswerChange}
+                />
+              </div>
+            ))
+          )}
+        </div>
 
         <p className="mt-2 text-sm">Perguntas Faltantes: {perguntasFaltantes.length}</p>
+
+        <div className="mt-2 p-3 bg-white/70 rounded-lg shadow-inner border border-gray-200">
+          <h3 className="text-base font-semibold mb-2 text-gray-800">Pendências</h3>
+          {notMetCriterias.length === 0 ? (
+            <div className="flex items-center text-green-600 font-medium">
+              <FiCheckCircle className="mr-2" />
+              Sem pendências! Tudo está completo.
+            </div>
+          ) : (
+            <ul className="list-none space-y-2">
+              {notMetCriterias.map((criteria, index) => (
+                <li key={index} className="flex items-center bg-red-100 p-2 rounded-md shadow-sm text-red-700">
+                  <FiAlertTriangle className="mr-2" />
+                  <span className="font-medium">{criteria}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </CardContent>
 
-      {/* Nova seção de pendências com estilo aprimorado */}
-<div className="mt-4 p-3 bg-gray-100 rounded-lg shadow-inner">
-  <h3 className="text-lg font-semibold mb-2 text-gray-700">Pendências</h3>
-
-  {notMetCriterias.length === 0 ? (
-    <div className="flex items-center text-green-600">
-      ✅ <span className="ml-2">Sem pendências! Tudo está completo.</span>
-    </div>
-  ) : (
-    <ul className="list-none space-y-2">
-      {notMetCriterias.map((criteria, index) => (
-        <li key={index} className="flex items-center bg-red-100 p-2 rounded-md shadow-sm">
-          <span className="text-red-500 text-lg mr-2">⚠️</span>
-          <span className="text-red-700 font-medium">{criteria}</span>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
-
-      <AcoesCoordenadorCentro
-        centroId={centro._id}
-        coordQuestionsAnswered={questoesCoordenador}
-        onVerRespostas={handleCardClick}
-        onVerHistorico={handleHistoryClick}
-        onFinalizarAnalise={(status:boolean) => {
-          console.log("FINALIZOU", centro.NOME_CURTO, status)
-          setFinalizou(status)}
-        }
-        hasSummary={summaries && summaries.length > 0}
-      />
- 
+      <div className="mt-3">
+        <AcoesCoordenadorCentro
+          centroId={centro._id}
+          coordQuestionsAnswered={questoesCoordenador}
+          onVerRespostas={handleCardClick}
+          onVerHistorico={handleHistoryClick}
+          onFinalizarAnalise={(status:boolean) => {
+            setFinalizou(status)}
+          }
+          hasSummary={summaries && summaries.length > 0}
+          summaries={summaries}
+        />
+      </div>
     </Card>
   );
 };

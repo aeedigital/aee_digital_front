@@ -36,7 +36,29 @@ function RegionalList() {
         const cadastroInfo = await getCadastroInfo();
         setPeriod({ start: cadastroInfo.start, end: cadastroInfo.end });
 
-        const response = await apiFetch(`/regionais`, { cache: "no-store" });
+        // Formatar datas para ISO (yyyy-mm-dd)
+        const formatToISO = (dateStr?: string) => {
+          if (!dateStr) return undefined;
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+            const [d, m, y] = dateStr.split("/");
+            return `${y}-${m}-${d}`;
+          }
+          return dateStr;
+        };
+
+        const dateFrom = formatToISO(cadastroInfo.start);
+        const dateTo = formatToISO(cadastroInfo.end);
+
+        // Usar nova rota /regionais/overview com agregação pronta
+        let overviewUrl = `/regionais/overview`;
+        const params = new URLSearchParams();
+        if (dateFrom) params.append("dateFrom", dateFrom);
+        if (dateTo) params.append("dateTo", dateTo);
+        if (params.toString()) {
+          overviewUrl += `?${params.toString()}`;
+        }
+
+        const response = await apiFetch(overviewUrl, { cache: "no-store" });
 
         if (!response.ok) {
           const message = `Falha ao buscar regionais (${response.status})`;
@@ -45,7 +67,7 @@ function RegionalList() {
 
         const regionaisData: Regional[] = await response.json();
 
-        console.log("Regionais fetched:", regionaisData);
+        console.log("Regionais overview fetched:", regionaisData);
 
         setRegionais(
           regionaisData.sort((a, b) =>
@@ -87,9 +109,8 @@ function RegionalList() {
 
   const formattedPeriod =
     period && (period.start || period.end)
-      ? `${formatDate(period.start) || "início não definido"} até ${
-          formatDate(period.end) || "sem data de término"
-        }`
+      ? `${formatDate(period.start) || "início não definido"} até ${formatDate(period.end) || "sem data de término"
+      }`
       : null;
 
   return (
@@ -118,15 +139,44 @@ function RegionalList() {
 
         {!loading &&
           !noRegionais &&
-          regionais.map((regional, index) => (
-            <Regional_Card
-              key={regional._id || regional.NOME_REGIONAL || index}
-              nome={regional.NOME_REGIONAL}
-              pais={regional.PAIS}
-              regionalId={regional._id}
-              period={period}
-            />
-          ))}
+          regionais.map((regional, index) => {
+            const regionalId =
+              (regional as any)?._id ||
+              (regional as any)?.id ||
+              (regional as any)?.regionalId ||
+              (regional as any)?.ID ||
+              null;
+
+            const nomeRegional =
+              regional.NOME_REGIONAL ||
+              (regional as any)?.nomeRegional ||
+              (regional as any)?.nome ||
+              (regional as any)?.name ||
+              "Sem nome";
+
+            if (!regionalId) {
+              console.warn("[Resumo/Aliança] Regional sem ID", regional);
+            }
+
+            console.log("[Regional_Card] Props:", {
+              regionalData: regional,
+              nome: nomeRegional,
+              centrosCount: (regional as any)?.centrosCount,
+              finalizadosCount: (regional as any)?.finalizadosCount
+            });
+
+            return (
+              <Regional_Card
+                key={regionalId || nomeRegional || index}
+                nome={nomeRegional}
+                pais={regional.PAIS || ""}
+                regionalId={regionalId || ""}
+                centrosCount={(regional as any)?.centrosCount || 0}
+                finalizadosCount={(regional as any)?.finalizadosCount || 0}
+                period={period}
+              />
+            );
+          })}
       </div>
     </div>
   );

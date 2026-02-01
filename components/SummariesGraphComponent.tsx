@@ -99,38 +99,39 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
   // Função para buscar os dados da API
   const fetchData = useCallback(async () => {
     try {
-
       console.log("Buscando dados para o gráfico com datas:", { startDate, endDate });
-      const summariesPath = apiUrl(`/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt&dateFrom=${startDate}&dateTo=${endDate}`);
-      const centrosPath = apiUrl(`/centros?STATUS=Pendente,Integrada,Inscrita`);
 
-      const [summaries, centros]: [Summary[], Centro[]] = await Promise.all([
-        fetch(summariesPath).then(res => res.json()),
-        fetch(centrosPath).then(res => res.json())
-      ]);
+      // Converter datas do formato brasileiro para ISO
+      const convertDateToISOFormat = (date: string): string => {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+          const [d, m, y] = date.split("/");
+          return `${y}-${m}-${d}`;
+        }
+        return date;
+      };
 
-      console.log("Dados de resumos recebidos:", summaries);
-      console.log("Dados de centros recebidos:", centros);
+      const dateFromISO = convertDateToISOFormat(startDate);
+      const dateToISO = convertDateToISOFormat(endDate);
 
+      // Usar nova rota /summaries/stats com dados agregados
+      const params = new URLSearchParams();
+      params.append("dateFrom", dateFromISO);
+      params.append("dateTo", dateToISO);
+      // Enviar status como array (múltiplos parâmetros)
+      ["Pendente", "Integrada", "Inscrita"].forEach(status => {
+        params.append("status", status);
+      });
+
+      const statsResponse = await fetch(apiUrl(`/summaries/stats?${params.toString()}`));
+      const stats = await statsResponse.json();
+
+      console.log("Dados de stats recebidos:", stats);
+
+      // Gerar intervalo de datas para preencher os gaps
       const allDates = generateDateRange(startDate, endDate);
-      const summariesGroupedData = groupEventsByDay(summaries);
+      const eventsByDay = stats.eventsByDay || {};
 
-      // último summary por centro (mais recente)
-      const latestSummaryByCentro = summaries.reduce(
-        (acc: Record<string, { ts: number; summary: Summary }>, summary: Summary) => {
-          const ts = new Date(summary.updatedAt ?? summary.createdAt).getTime();
-          const current = acc[summary.CENTRO_ID];
-
-          if (!current || ts > current.ts) {
-            acc[summary.CENTRO_ID] = { ts, summary };
-          }
-
-          return acc;
-        },
-        {}
-      );
-
-      const filledData = allDates.map((date) => summariesGroupedData[date] || 0);
+      const filledData = allDates.map((date) => eventsByDay[date] || 0);
 
       setChartData({
         labels: allDates,
@@ -147,8 +148,9 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
         ],
       });
 
-      const responded = Object.keys(latestSummaryByCentro).length;
-      const pendenteRaw = centros.length ? 100 - (responded / centros.length) * 100 : 0;
+      const respondedCount = stats.respondedCount || 0;
+      const totalCentros = stats.totalCentros || 0;
+      const pendenteRaw = totalCentros > 0 ? 100 - (respondedCount / totalCentros) * 100 : 0;
       const pendente = Math.min(100, Math.max(0, pendenteRaw));
 
       setChartDataBar({

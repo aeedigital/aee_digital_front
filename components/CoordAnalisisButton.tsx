@@ -12,9 +12,10 @@ interface CoordAnalisisButtonProps {
     centroId: string;
     coordQuestionAnswered: QuestionAnswer[];
     hasSummary: boolean;
+    summaries?: Summary[];
 }
 
-export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestionAnswered, hasSummary}: CoordAnalisisButtonProps) {
+export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestionAnswered, hasSummary, summaries}: CoordAnalisisButtonProps) {
 
     const [summary, setSummary] = useState<Summary | undefined>();
     const [isReady, setIsReady] = useState<boolean>(false);
@@ -35,14 +36,22 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestio
     }, [coordQuestionAnswered, hasSummary, centroId]);
 
     useEffect(() => {
+        // se já recebemos summaries do agregado (mesmo vazio), não buscar novamente
+        if (summaries !== undefined) {
+            if (summaries.length > 0) {
+                setSummary(summaries[0]);
+            }
+            return;
+        }
+
         async function fetchSummary() {
             try {
                 let summariesPath = apiUrl(`/centros/${centroId}/summaries`);
                 const cadastroInfo = await getCadastroInfo();
 
                 if (cadastroInfo?.start && cadastroInfo?.end) {
-                        summariesPath = appendDatePeriod(summariesPath, { start: cadastroInfo.start, end: cadastroInfo.end });
-                        }
+                    summariesPath = appendDatePeriod(summariesPath, { start: cadastroInfo.start, end: cadastroInfo.end });
+                }
 
                 const res = await fetch(summariesPath);
                 const data = await res.json();
@@ -56,7 +65,7 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId, coordQuestio
             }
         }
         fetchSummary();
-    }, [centroId]);
+    }, [centroId, summaries]);
 
     const handleAnalysis = async () =>{
         console.log("Analisando...")
