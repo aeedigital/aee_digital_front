@@ -56,7 +56,7 @@ export async function generateStaticParams() {
 }
 
 async function fetchJson<T>(path: string) {
-  const response = await fetch(apiUrl(path), { cache: "no-store" });
+  const response = await fetch(apiUrl(path));
   if (!response.ok) {
     throw new Error(`Falha ao buscar ${path} (${response.status})`);
   }
@@ -218,4 +218,3 @@ export default async function PublicCentroRespostas({ params }: Params) {
     </div>
   );
 }
-export const revalidate = 0;
