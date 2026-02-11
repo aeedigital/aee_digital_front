@@ -17,23 +17,19 @@ const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { label: "Pessoas", path: "/pessoas" },
     { label: "Centros", path: "/centros" },
     { label: "Usuários", path: "/admin/usuarios" },
-    { label: "Respostas públicas", path: "/respostas" },
   ],
   coord_geral: [
     { label: "Resumo Aliança", path: "/resumo/alianca" },
     { label: "Pessoas", path: "/pessoas" },
     { label: "Centros", path: "/centros" },
-    { label: "Respostas públicas", path: "/respostas" },
   ],
   coord_regional: [
     { label: "Resumo Regional", path: "/resumo/coordenador" },
     { label: "Centros", path: "/centros" },
-    { label: "Respostas públicas", path: "/respostas" },
   ],
   presidente: [
     { label: "Cadastro", path: "/cadastro" },
     { label: "Centros", path: "/centros" },
-    { label: "Respostas públicas", path: "/respostas" },
   ],
 };
 
