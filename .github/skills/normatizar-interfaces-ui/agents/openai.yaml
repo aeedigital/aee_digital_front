@@ -1,0 +1,4 @@
+interface:
+  display_name: "Normatizar Interfaces e UI"
+  short_description: "Padronizar contratos TS e consistencia visual."
+  default_prompt: "Use $normatizar-interfaces-ui para revisar e padronizar interfaces TypeScript e componentes de UI neste repositorio."
