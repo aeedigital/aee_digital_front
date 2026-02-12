@@ -9,19 +9,23 @@ interface QuizProps {
 }
 
 export function QuizComponent({ quiz, centroId, initialCache, onAnswerChange }: QuizProps) {
-  
   return (
     <div className="border p-4 rounded-md">
       <h2 className="text-xl font-semibold">{quiz.CATEGORY}</h2>
-      {quiz.QUESTIONS.map((questions, questionIndex) => (
-        <GroupQuestionComponent
-          key={questionIndex}
-          centroId={centroId}
-          questionGroup={questions}
-          initialCache = {initialCache}
-          onAnswerChange = {onAnswerChange}
-        />
-      ))}
+      {quiz.QUESTIONS.map((questionGroup) => {
+        const questionIds = questionGroup.GROUP.map((question) => question._id).join("-");
+        const groupKey = `${quiz.CATEGORY}-${questionIds}-${questionGroup.IS_MULTIPLE ? "multi" : "single"}`;
+
+        return (
+          <GroupQuestionComponent
+            key={groupKey}
+            centroId={centroId}
+            questionGroup={questionGroup}
+            initialCache={initialCache}
+            onAnswerChange={onAnswerChange}
+          />
+        );
+      })}
     </div>
   );
 }

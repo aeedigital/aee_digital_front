@@ -15,6 +15,9 @@ import MainNav from "@/components/MainNav";
 export const metadata: Metadata = {
   title: "Aliança Digital",
   description: "Site da Aliança Digital",
+  other: {
+    google: "notranslate",
+  },
 };
 
 export default function RootLayout({
@@ -25,8 +28,8 @@ export default function RootLayout({
 
 
   return (
-    <html lang="en">
-      <body className="bg-gray-50 dark:bg-gray-900">
+    <html lang="pt-BR" translate="no">
+      <body className="notranslate bg-gray-50 dark:bg-gray-900" translate="no">
       <Providers>
         <Suspense fallback={null}>
           <AuthGuard>

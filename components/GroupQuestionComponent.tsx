@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 import { QuestionComponent } from "./QuestionComponent";
 import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
@@ -26,6 +26,7 @@ interface QuestionAnswer {
 }
 
 interface QuestionAnswerGroup {
+  groupKey: string;
   questionsAnswered: QuestionAnswer[];
 }
 
@@ -33,6 +34,27 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
   const { toast } = useToast();
   const [answerGroups, setAnswerGroups] = useState<QuestionAnswerGroup[]>([]);
   const initializedRef = useRef(false);
+  const groupCounterRef = useRef(0);
+
+  const createLocalGroupKey = useCallback(() => {
+    groupCounterRef.current += 1;
+    return `group-${groupCounterRef.current}`;
+  }, []);
+
+  const buildGroupKey = useCallback(
+    (questionsAnswered: QuestionAnswer[]) => {
+      const answerIds = questionsAnswered
+        .map(({ answer }) => answer?._id)
+        .filter((id): id is string => Boolean(id));
+
+      if (answerIds.length === questionsAnswered.length && answerIds.length > 0) {
+        return answerIds.join("-");
+      }
+
+      return createLocalGroupKey();
+    },
+    [createLocalGroupKey]
+  );
   
 
   const setGroupCache = useCallback(() => {
@@ -89,6 +111,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     const emptyGroups: QuestionAnswerGroup[] = [];
     // Create a single empty group initially
     const emptyGroup: QuestionAnswerGroup = {
+      groupKey: createLocalGroupKey(),
       questionsAnswered: questionGroup.GROUP.map((question) => {
 
         const questionAnswered = {
@@ -102,7 +125,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
           }
         }
         if(shouldCreateQuestions){
-          createAnswer(question._id, " ")
+          void createAnswer(question._id, " ")
         }
 
         return questionAnswered;
@@ -111,7 +134,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     emptyGroups.push(emptyGroup);
 
     return emptyGroups;
-  }, [questionGroup.GROUP, centroId, createAnswer]);
+  }, [questionGroup.GROUP, centroId, createAnswer, createLocalGroupKey]);
 
 
   const handleAddGroup = () => {
@@ -123,11 +146,12 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     if (answerGroups.length > 1) {
       const answerGroupToRemove = answerGroups[index];
 
-      for (let index = 0; index < answerGroupToRemove.questionsAnswered.length; index++) {
-        const questionAnswered = answerGroupToRemove.questionsAnswered[index];
+      for (const questionAnswered of answerGroupToRemove.questionsAnswered) {
         const {question, answer} = questionAnswered;
 
-        removeAnswer(question._id, answer._id)
+        if (answer._id) {
+          void removeAnswer(question._id, answer._id)
+        }
       }
 
       setAnswerGroups((prevGroups) => prevGroups.filter((_, i) => i !== index));
@@ -152,17 +176,21 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
       }
 
       for (let i = 0; i < answersLength; i++) {
-        const group: QuestionAnswerGroup = {
-          questionsAnswered: questionGroup.GROUP.map((question) => {
-            const answer = groupCache[question._id]?.[i] || {
-              CENTRO_ID: centroId,
-              QUIZ_ID: "",
-              QUESTION_ID: question._id,
-              ANSWER: "",
-            };
+        const questionsAnswered = questionGroup.GROUP.map((question) => {
+          const answer = groupCache[question._id]?.[i] || {
+            CENTRO_ID: centroId,
+            QUIZ_ID: "",
+            QUESTION_ID: question._id,
+            ANSWER: "",
+            _id: "",
+          };
 
-            return { question, answer };
-          })
+          return { question, answer };
+        });
+
+        const group: QuestionAnswerGroup = {
+          groupKey: buildGroupKey(questionsAnswered),
+          questionsAnswered,
         };
         tempAnswerGroups.push(group);
       }
@@ -175,16 +203,16 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
       initializedRef.current = true;
     }
     fetchAnswers();
-  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, setGroupCache]);
+  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, setGroupCache, buildGroupKey]);
 
   return (
     <div className="space-y-6">
       {answerGroups.map((group, groupIndex) => (
-        <div key={groupIndex} className="relative space-y-4 border p-4 rounded-md shadow-sm">
+        <div key={group.groupKey} className="relative space-y-4 border p-4 rounded-md shadow-sm">
           <div className="flex flex-wrap gap-4">
             {group.questionsAnswered.map((questionAnswered, questionIndex) => (
               <QuestionComponent
-                key={questionIndex}
+                key={`${questionAnswered.question._id}-${questionAnswered.answer?._id || "pending"}`}
                 centroId={centroId}
                 answer={questionAnswered.answer}
                 question={questionAnswered.question}

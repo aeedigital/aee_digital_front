@@ -176,15 +176,22 @@ function CadastroPage() {
           {currentPageIndex < pages.length ? (
             <div>
               <div className="space-y-4">
-                {pages[currentPageIndex].QUIZES.map((quiz, quizIndex) => (
-                  <QuizComponent
-                    key={quizIndex}
-                    centroId={centroId}
-                    quiz={quiz}
-                    initialCache={answersCache}
-                    onAnswerChange={handleAnswerChange}
-                  />
-                ))}
+                {pages[currentPageIndex].QUIZES.map((quiz) => {
+                  const quizQuestionIds = quiz.QUESTIONS.flatMap((questionGroup) =>
+                    questionGroup.GROUP.map((question) => question._id)
+                  ).join("-");
+                  const quizKey = `${quiz.CATEGORY}-${quizQuestionIds}`;
+
+                  return (
+                    <QuizComponent
+                      key={quizKey}
+                      centroId={centroId}
+                      quiz={quiz}
+                      initialCache={answersCache}
+                      onAnswerChange={handleAnswerChange}
+                    />
+                  );
+                })}
               </div>
 
               <div className="mt-6 flex flex-col items-center space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">

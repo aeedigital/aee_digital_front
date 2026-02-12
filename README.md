@@ -19,11 +19,6 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Environment Variables
 
 - `NEXT_PUBLIC_API_URL` (obrigatoria)
-- `NEXT_PUBLIC_SENTRY_DSN` (opcional, habilita captura de erros em producao)
-- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (opcional, padrao `0.1`)
-- `SENTRY_ORG` (opcional, para upload de sourcemaps no build)
-- `SENTRY_PROJECT` (opcional, para upload de sourcemaps no build)
-- `SENTRY_AUTH_TOKEN` (opcional, para upload de sourcemaps no build)
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

@@ -57,10 +57,10 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
         ).then((res: any) => res.json());
       }
 
-      setQuestionValue((prevValue) => {
-        prevValue.ANSWER = value;
-        return prevValue;
-      });
+      setQuestionValue((prevValue) => ({
+        ...prevValue,
+        ANSWER: String(value),
+      }));
 
       setIsEmpty(IS_REQUIRED && (!value || (typeof value === 'string' && value.trim() === '')));
 
