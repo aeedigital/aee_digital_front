@@ -125,15 +125,17 @@ function CadastroPage() {
       }
 
       const existingAnswers = prev[questionId] || [];
-      let updatedAnswers;
+      let updatedAnswers: (Answer | null)[];
 
       if (existingAnswers.length > 0) {
         if (newAnswer === null && answerId !== null) {
           updatedAnswers = existingAnswers.filter((answer) => answer._id !== answerId);
         } else if (newAnswer && answerId) {
-          updatedAnswers = existingAnswers.map((answer) =>
+          const replaced = existingAnswers.map((answer) =>
             answer._id === answerId ? newAnswer : answer
           );
+          const didReplace = replaced.some((answer) => answer._id === answerId);
+          updatedAnswers = didReplace ? replaced : [...replaced, newAnswer];
         } else if (newAnswer && !answerId) {
           updatedAnswers = [...existingAnswers, newAnswer];
         } else {
@@ -143,7 +145,36 @@ function CadastroPage() {
         updatedAnswers = [newAnswer];
       }
 
-      return { ...prev, [questionId]: updatedAnswers.filter((answer): answer is Answer => answer !== null) };
+      const nonNullAnswers = updatedAnswers.filter((answer): answer is Answer => answer !== null);
+      const answersWithId = nonNullAnswers.filter((answer) => Boolean(answer._id));
+      const answersWithoutId = nonNullAnswers.filter((answer) => !answer._id);
+
+      const deduplicatedAnswers = [
+        ...Array.from(new Map(answersWithId.map((answer) => [answer._id, answer])).values()),
+        ...answersWithoutId,
+      ];
+
+      const debugEnabled =
+        typeof window !== "undefined" &&
+        (new URLSearchParams(window.location.search).get("debugValidation") === "1" ||
+          window.localStorage.getItem("debugValidation") === "1");
+
+      if (debugEnabled) {
+        console.groupCollapsed(`[Cadastro] update answersCache question=${questionId}`);
+        console.log("answerId recebido:", answerId);
+        console.log("newAnswer:", newAnswer);
+        console.log(
+          "antes:",
+          existingAnswers.map((a) => ({ _id: a._id, ANSWER: a.ANSWER, updatedAt: (a as any).updatedAt }))
+        );
+        console.log(
+          "depois:",
+          deduplicatedAnswers.map((a) => ({ _id: a._id, ANSWER: a.ANSWER, updatedAt: (a as any).updatedAt }))
+        );
+        console.groupEnd();
+      }
+
+      return { ...prev, [questionId]: deduplicatedAnswers };
     });
   };
 

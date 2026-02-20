@@ -17,6 +17,7 @@ import FormInput from './FormInput';
 import { QuestionComponent } from './QuestionComponent';
 import {AcoesCoordenadorCentro} from '@components/AcoesCoordenadorCentro';
 import { apiUrl } from '@/lib/api';
+import { isRequiredAnswerFilled, pickCurrentAnswer } from '@/lib/requiredAnswers';
 
 interface CardProps {
   centro: Centro;
@@ -132,12 +133,20 @@ const House_Card: React.FC<CardProps> = ({
 
   // 3. Verifica quais perguntas obrigatórias não foram respondidas
   useEffect(() => {
-    if (!allAnswers || allAnswers.length === 0) return;
     if (!requiredQuestions.length) return;
 
+    const answersByQuestionId = allAnswers.reduce<Record<string, Answer[]>>((acc, answer) => {
+      if (!answer.QUESTION_ID) return acc;
+      if (!acc[answer.QUESTION_ID]) {
+        acc[answer.QUESTION_ID] = [];
+      }
+      acc[answer.QUESTION_ID].push(answer);
+      return acc;
+    }, {});
+
     const notAnswered = requiredQuestions.filter((rq) => {
-      const resp = allAnswers.filter((a) => a.QUESTION_ID === rq._id).pop();
-      return !resp || !resp.ANSWER?.trim();
+      const currentAnswer = pickCurrentAnswer(answersByQuestionId[rq._id] || []);
+      return !isRequiredAnswerFilled(currentAnswer);
     });
 
     setPerguntasFaltantes(notAnswered.map((q) => q.QUESTION));

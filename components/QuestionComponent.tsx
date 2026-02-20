@@ -69,6 +69,20 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
           ...response,
           ANSWER: String(value),
         };
+
+        const debugEnabled =
+          typeof window !== "undefined" &&
+          (new URLSearchParams(window.location.search).get("debugValidation") === "1" ||
+            window.localStorage.getItem("debugValidation") === "1");
+
+        if (debugEnabled) {
+          console.groupCollapsed(`[QuestionComponent] onInputChange question=${question._id}`);
+          console.log("questionValue atual:", questionValue);
+          console.log("response backend:", response);
+          console.log("updatedAnswer enviado ao cache:", updatedAnswer);
+          console.groupEnd();
+        }
+
         onAnswerChange(question._id, response._id, updatedAnswer);
       }
     } catch (error) {
