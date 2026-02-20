@@ -18,11 +18,12 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import { Summary } from "@/interfaces/form.interface";
-import { Centro } from "@/interfaces/centro.interface";
 
 
 // Registra os componentes do Chart.js
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, BarElement, ChartDataLabels);
+
+const EXCLUDED_REGIONAL_IDS = ["670db855de561168547206da"];
 
 interface SummariesGraphProps {
   startDate: string; // Data no formato brasileiro "dd/mm/yyyy"
@@ -55,6 +56,90 @@ function groupEventsByDay(data: Summary[]): Record<string, number> {
     counts[date] = (counts[date] || 0) + 1;
     return counts;
   }, {});
+}
+
+function filterSummariesByPeriod(
+  summaries: Summary[],
+  dateFromISO: string,
+  dateToISO: string
+): Summary[] {
+  return summaries.filter((summary) => {
+    const eventDate = new Date(summary.createdAt);
+    if (Number.isNaN(eventDate.getTime())) return false;
+    const dateKey = eventDate.toISOString().split("T")[0];
+    return dateKey >= dateFromISO && dateKey <= dateToISO;
+  });
+}
+
+type ExcludedRegionalStats = {
+  excludedEventsByDay: Record<string, number>;
+  excludedTotalCentros: number;
+  excludedRespondedCount: number;
+};
+
+async function fetchExcludedRegionalStats(
+  dateFromISO: string,
+  dateToISO: string
+): Promise<ExcludedRegionalStats> {
+  const excludedEventsByDay: Record<string, number> = {};
+  const respondedCentros = new Set<string>();
+  let excludedTotalCentros = 0;
+
+  await Promise.all(
+    EXCLUDED_REGIONAL_IDS.map(async (regionalId) => {
+      const centrosParams = new URLSearchParams();
+      centrosParams.append("REGIONAL", regionalId);
+      centrosParams.append("STATUS", "Pendente,Integrada,Inscrita");
+
+      const [summariesResponse, centrosResponse] = await Promise.all([
+        fetch(apiUrl(`/regionais/${regionalId}/summaries`)),
+        fetch(apiUrl(`/centros?${centrosParams.toString()}`)),
+      ]);
+
+      if (!summariesResponse.ok || !centrosResponse.ok) {
+        throw new Error(`Falha ao buscar dados da regional ${regionalId}`);
+      }
+
+      const summariesData = await summariesResponse.json();
+      const centrosData = await centrosResponse.json();
+
+      const summaries = Array.isArray(summariesData)
+        ? summariesData
+        : Array.isArray(summariesData?.summaries)
+          ? summariesData.summaries
+          : [];
+      const centros = Array.isArray(centrosData)
+        ? centrosData
+        : Array.isArray(centrosData?.centros)
+          ? centrosData.centros
+          : [];
+
+      excludedTotalCentros += centros.length;
+
+      const filteredSummaries = filterSummariesByPeriod(
+        summaries as Summary[],
+        dateFromISO,
+        dateToISO
+      );
+
+      filteredSummaries.forEach((summary) => {
+        if (summary.CENTRO_ID) {
+          respondedCentros.add(summary.CENTRO_ID);
+        }
+      });
+
+      const groupedByDay = groupEventsByDay(filteredSummaries);
+      Object.entries(groupedByDay).forEach(([date, value]) => {
+        excludedEventsByDay[date] = (excludedEventsByDay[date] || 0) + value;
+      });
+    })
+  );
+
+  return {
+    excludedEventsByDay,
+    excludedTotalCentros,
+    excludedRespondedCount: respondedCentros.size,
+  };
 }
 
 const chartOptions = {
@@ -123,15 +208,50 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
       });
 
       const statsResponse = await fetch(apiUrl(`/summaries/stats?${params.toString()}`));
+      if (!statsResponse.ok) {
+        throw new Error(`Erro ao buscar estatísticas (${statsResponse.status})`);
+      }
       const stats = await statsResponse.json();
 
       console.log("Dados de stats recebidos:", stats);
 
+      const globalEventsByDay: Record<string, number> = stats.eventsByDay || {};
+      let adjustedEventsByDay: Record<string, number> = { ...globalEventsByDay };
+      let adjustedRespondedCount = Number(stats.respondedCount || 0);
+      let adjustedTotalCentros = Number(stats.totalCentros || 0);
+
+      try {
+        const {
+          excludedEventsByDay,
+          excludedTotalCentros,
+          excludedRespondedCount
+        } = await fetchExcludedRegionalStats(dateFromISO, dateToISO);
+
+        const allDates = new Set([
+          ...Object.keys(globalEventsByDay),
+          ...Object.keys(excludedEventsByDay),
+        ]);
+
+        adjustedEventsByDay = {};
+        allDates.forEach((date) => {
+          const globalValue = globalEventsByDay[date] || 0;
+          const excludedValue = excludedEventsByDay[date] || 0;
+          adjustedEventsByDay[date] = Math.max(0, globalValue - excludedValue);
+        });
+
+        adjustedTotalCentros = Math.max(0, adjustedTotalCentros - excludedTotalCentros);
+        adjustedRespondedCount = Math.max(0, adjustedRespondedCount - excludedRespondedCount);
+        adjustedRespondedCount = Math.min(adjustedRespondedCount, adjustedTotalCentros);
+      } catch (excludedError) {
+        console.warn(
+          "[SummariesGraphComponent] Falha ao excluir regionais configuradas; usando dados globais.",
+          excludedError
+        );
+      }
+
       // Gerar intervalo de datas para preencher os gaps
       const allDates = generateDateRange(startDate, endDate);
-      const eventsByDay = stats.eventsByDay || {};
-
-      const filledData = allDates.map((date) => eventsByDay[date] || 0);
+      const filledData = allDates.map((date) => adjustedEventsByDay[date] || 0);
 
       setChartData({
         labels: allDates,
@@ -148,9 +268,10 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
         ],
       });
 
-      const respondedCount = stats.respondedCount || 0;
-      const totalCentros = stats.totalCentros || 0;
-      const pendenteRaw = totalCentros > 0 ? 100 - (respondedCount / totalCentros) * 100 : 0;
+      const pendenteRaw =
+        adjustedTotalCentros > 0
+          ? 100 - (adjustedRespondedCount / adjustedTotalCentros) * 100
+          : 0;
       const pendente = Math.min(100, Math.max(0, pendenteRaw));
 
       setChartDataBar({
