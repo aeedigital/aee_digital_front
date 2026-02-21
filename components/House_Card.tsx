@@ -18,6 +18,7 @@ import { QuestionComponent } from './QuestionComponent';
 import {AcoesCoordenadorCentro} from '@components/AcoesCoordenadorCentro';
 import { apiUrl } from '@/lib/api';
 import { isRequiredAnswerFilled, pickCurrentAnswer } from '@/lib/requiredAnswers';
+import { normalizeSummaries, pickLatestSummary } from '@/lib/summaries';
 
 interface CardProps {
   centro: Centro;
@@ -60,6 +61,7 @@ const House_Card: React.FC<CardProps> = ({
   const [backgroundColor, setBackgroundColor] = useState<string>('bg-white');
   const [notMetCriterias, setNotMetCriterias] = useState<string[]>([]);
   const [finalizou, setFinalizou] = useState<boolean>(false);
+  const normalizedSummaries = useMemo(() => normalizeSummaries(summaries), [summaries]);
   const requiredQuestions = useMemo(() => {
     if (!form) return [];
     const req: Question[] = [];
@@ -179,7 +181,7 @@ const House_Card: React.FC<CardProps> = ({
     const finalizouCriteria = {
       name: "Presidente finalizar a avaliação",
       method : () => {
-        return summaries && summaries.length > 0;
+        return normalizedSummaries.length > 0;
       }
     }
 
@@ -193,12 +195,11 @@ const House_Card: React.FC<CardProps> = ({
     const analysisCriteria = {
       name: "Coordenador finalizar análise",
       method : () => {
-        console.log("FINALIZOU", centro.NOME_CURTO, summaries)
-        if(!summaries || summaries.length === 0){
+        if(normalizedSummaries.length === 0){
           return false;
         }
-        const lastSummary = summaries[0];
-        return "validatedByCoordAt" in lastSummary;;
+        const lastSummary = pickLatestSummary(normalizedSummaries);
+        return Boolean(lastSummary?.validatedByCoordAt);
       }
     }
 
@@ -220,7 +221,19 @@ const House_Card: React.FC<CardProps> = ({
 
     setNotMetCriterias(notMetCriterias)
 
-    console.log("CRITERIAS MET", centro.NOME_CURTO, criteriasMet)
+    const debugResumo =
+      typeof window !== "undefined" &&
+      (new URLSearchParams(window.location.search).get("debugResumo") === "1" ||
+        window.localStorage.getItem("debugResumo") === "1");
+
+    if (debugResumo && notMetCriterias.includes("Presidente finalizar a avaliação") && normalizedSummaries.length === 0) {
+      console.warn("[House_Card][debugResumo] Pendência do presidente sem summaries normalizados", {
+        centroId: centro._id,
+        centro: centro.NOME_CURTO || centro.NOME_CENTRO,
+        summariesRecebidos: summaries,
+        summariesNormalizadosCount: normalizedSummaries.length,
+      });
+    }
 
     if(criteriasMet.length === criteria.length){
       return 'bg-green-200';
@@ -230,7 +243,7 @@ const House_Card: React.FC<CardProps> = ({
       return 'bg-red-200';
     }
  
-  }, [questoesCoordenador, summaries, finalizou, centro.NOME_CURTO]);
+  }, [questoesCoordenador, normalizedSummaries, finalizou, centro.NOME_CURTO, centro._id, centro.NOME_CENTRO, summaries]);
 
   useEffect(() => {
     setBackgroundColor(getBackgroundColor());
@@ -360,8 +373,8 @@ const House_Card: React.FC<CardProps> = ({
           onFinalizarAnalise={(status:boolean) => {
             setFinalizou(status)}
           }
-          hasSummary={summaries && summaries.length > 0}
-          summaries={summaries}
+          hasSummary={normalizedSummaries.length > 0}
+          summaries={normalizedSummaries}
         />
       </div>
     </Card>

@@ -10,6 +10,10 @@ import { getCadastroInfo } from "@/app/actions/cadastroInfo";
 import { Centro } from '@/interfaces/centro.interface';
 import { Pessoa } from '@/interfaces/pessoas.interface';
 import { apiUrl } from '@/lib/api';
+import {
+  pickLatestSummary,
+  normalizeSummaries,
+} from '@/lib/summaries';
 
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,6 +45,7 @@ export default function ResumoCoordenadorWrapper() {
 function MainPage() {
   const searchParams = useSearchParams();
   const regionalId = searchParams.get('regionalId') || searchParams.get('regionalid') || searchParams.get('regionalID');
+  const debugResumo = searchParams.get("debugResumo") === "1";
 
   const { user } = useUser();
 
@@ -53,7 +58,7 @@ function MainPage() {
 
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
-  const [summaryByCentroId, setSummaryByCentroId] = useState<{ [key: string]: any }>({});
+  const [summaryByCentroId, setSummaryByCentroId] = useState<Record<string, Summary[]>>({});
   const [answersByCentroId, setAnswersByCentroId] = useState<{ [key: string]: Answer[] }>({});
 
   const hasLoadedRef = useRef(false); // Use useRef instead of useState
@@ -189,13 +194,24 @@ function MainPage() {
         setCentros(centros);
         setRegionalInfo(regionalData || {});
 
-        // Processar summaries e answers em mapa por centro
-        const summariesBycentro: { [key: string]: any[] } = {};
-        const answersBycentro: { [key: string]: Answer[] } = {};
+        // Processar answers/summaries da rota agregada (centros-with-answers)
+        const answersBycentro: Record<string, Answer[]> = {};
+        const summariesBycentro: Record<string, Summary[]> = {};
         for (const centro of centros) {
           const cid = centro._id;
-          summariesBycentro[cid] = centro.summaries || [];
-          answersBycentro[cid] = centro.answers || [];
+          answersBycentro[cid] = Array.isArray((centro as any).answers) ? (centro as any).answers : [];
+          summariesBycentro[cid] = normalizeSummaries((centro as any).summaries);
+        }
+
+        if (debugResumo) {
+          const summariesCountByCentro = Object.fromEntries(
+            centros.map((centro: Centro) => [centro._id, (summariesBycentro[centro._id] || []).length])
+          );
+
+          console.groupCollapsed("[Resumo/Coordenador] debugResumo=1");
+          console.log("formId atual:", cadastroInfo?.formId);
+          console.log("Contagem summaries da rota centros-with-answers por centro:", summariesCountByCentro);
+          console.groupEnd();
         }
 
         setSummaryByCentroId(summariesBycentro);
@@ -215,7 +231,7 @@ function MainPage() {
     }
 
     fetchData();
-  }, [regionalId])
+  }, [regionalId, debugResumo])
 
 
   function handleCentroCreated(newCentro: Centro) {
@@ -276,7 +292,8 @@ function MainPage() {
         return;
       }
 
-      const latest = summaries[summaries.length - 1];
+      const latest = pickLatestSummary(summaries);
+      if (!latest) return;
       const answersMap = new Map<string, string>();
       latest.QUESTIONS?.forEach((q: any) => {
         answersMap.set(q.QUESTION, q.ANSWER);
@@ -391,7 +408,7 @@ function MainPage() {
                   avaliacao_question={avaliacaoQuestion}
                   coordenador_questions={questoes_coordenador}
                   form={formulario}
-                  summaries={summaryByCentroId[centro._id]}
+                  summaries={summaryByCentroId[centro._id] || []}
                   answers={answersByCentroId[centro._id]}
                 />
               ))
