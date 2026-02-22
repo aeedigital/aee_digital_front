@@ -24,14 +24,37 @@ const toDateKey = (value?: string): string | null => {
 };
 
 export const normalizeSummaries = (input: unknown): Summary[] => {
+  const toSummary = (item: unknown): Summary | null => {
+    if (isRecord(item)) {
+      return item as unknown as Summary;
+    }
+
+    // Alguns endpoints podem retornar apenas o _id do summary.
+    // Preservamos esse caso como resumo mínimo para não perder o estado
+    // de "presidente finalizou avaliação".
+    if (typeof item === "string" && item.trim()) {
+      return {
+        _id: item,
+        CENTRO_ID: "",
+        FORM_ID: "",
+        QUESTIONS: [],
+        createdAt: "",
+        updatedAt: "",
+      };
+    }
+
+    return null;
+  };
+
   if (Array.isArray(input)) {
     return input
-      .filter((item) => isRecord(item))
-      .map((item) => item as unknown as Summary);
+      .map(toSummary)
+      .filter((item): item is Summary => item !== null);
   }
 
-  if (isRecord(input)) {
-    return [input as unknown as Summary];
+  const normalized = toSummary(input);
+  if (normalized) {
+    return [normalized];
   }
 
   return [];

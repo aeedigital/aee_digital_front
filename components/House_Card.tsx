@@ -15,7 +15,7 @@ import {
 
 import FormInput from './FormInput';
 import { QuestionComponent } from './QuestionComponent';
-import {AcoesCoordenadorCentro} from '@components/AcoesCoordenadorCentro';
+import { AcoesCoordenadorCentro } from '@components/AcoesCoordenadorCentro';
 import { apiUrl } from '@/lib/api';
 import { isRequiredAnswerFilled, pickCurrentAnswer } from '@/lib/requiredAnswers';
 import { normalizeSummaries, pickLatestSummary } from '@/lib/summaries';
@@ -159,8 +159,8 @@ const House_Card: React.FC<CardProps> = ({
     if (!questoesCoordenador || questoesCoordenador.length === 0) {
       return 'bg-white';
     }
-    
-    if(finalizou){
+
+    if (finalizou) {
       setNotMetCriterias([]);
       return 'bg-green-200';
     }
@@ -176,26 +176,26 @@ const House_Card: React.FC<CardProps> = ({
 
     const percentage = (answered / questions) * 100;
 
-    const criteria:any[] = []
+    const criteria: any[] = []
 
     const finalizouCriteria = {
       name: "Presidente finalizar a avaliação",
-      method : () => {
+      method: () => {
         return normalizedSummaries.length > 0;
       }
     }
 
     const coordResponseCriteria = {
       name: "Coordenador responder as perguntas",
-      method : () => {
+      method: () => {
         return percentage === 100;
       }
     }
 
     const analysisCriteria = {
       name: "Coordenador finalizar análise",
-      method : () => {
-        if(normalizedSummaries.length === 0){
+      method: () => {
+        if (normalizedSummaries.length === 0) {
           return false;
         }
         const lastSummary = pickLatestSummary(normalizedSummaries);
@@ -212,9 +212,9 @@ const House_Card: React.FC<CardProps> = ({
     let notMetCriterias = [];
 
     for (let i = 0; i < criteria.length; i++) {
-      if(criteria[i].method()){
+      if (criteria[i].method()) {
         criteriasMet.push(criteria[i].name)
-      }else{
+      } else {
         notMetCriterias.push(criteria[i].name)
       }
     }
@@ -235,14 +235,14 @@ const House_Card: React.FC<CardProps> = ({
       });
     }
 
-    if(criteriasMet.length === criteria.length){
+    if (criteriasMet.length === criteria.length) {
       return 'bg-green-200';
-    }else if(criteriasMet.length > 0){
+    } else if (criteriasMet.length > 0) {
       return 'bg-yellow-200';
-    }else{
+    } else {
       return 'bg-red-200';
     }
- 
+
   }, [questoesCoordenador, normalizedSummaries, finalizou, centro.NOME_CURTO, centro._id, centro.NOME_CENTRO, summaries]);
 
   useEffect(() => {
@@ -262,32 +262,32 @@ const House_Card: React.FC<CardProps> = ({
     answerId: string | null,
     newAnswer: Answer
   ) => {
-      setQuestoesCoordenador((prev) => {
-        const existingAnswers = prev.find((qa) => qa.question._id === questionId && qa.answer?._id === answerId);
+    setQuestoesCoordenador((prev) => {
+      const existingAnswers = prev.find((qa) => qa.question._id === questionId && qa.answer?._id === answerId);
 
-        if (existingAnswers) {
-          return prev.map((qa) => {
-            if (qa.answer?._id === answerId) {
-              return { ...qa, answer: newAnswer };
-            }
-            return qa;
-          })
-        }
-        else{
-
-          const questionToChange = prev.find((qa) => qa.question._id === questionId);
-          if (!questionToChange) {
-            console.warn('Questão não encontrada');
-            return prev;
-          }else{
-            questionToChange.answer = newAnswer;
+      if (existingAnswers) {
+        return prev.map((qa) => {
+          if (qa.answer?._id === answerId) {
+            return { ...qa, answer: newAnswer };
           }
-        }
-        return prev;
-        
+          return qa;
+        })
       }
-      );
-   
+      else {
+
+        const questionToChange = prev.find((qa) => qa.question._id === questionId);
+        if (!questionToChange) {
+          console.warn('Questão não encontrada');
+          return prev;
+        } else {
+          questionToChange.answer = newAnswer;
+        }
+      }
+      return prev;
+
+    }
+    );
+
   };
 
   const onInputChange = () => {
@@ -370,8 +370,9 @@ const House_Card: React.FC<CardProps> = ({
           coordQuestionsAnswered={questoesCoordenador}
           onVerRespostas={handleCardClick}
           onVerHistorico={handleHistoryClick}
-          onFinalizarAnalise={(status:boolean) => {
-            setFinalizou(status)}
+          onFinalizarAnalise={(status: boolean) => {
+            setFinalizou(status)
+          }
           }
           hasSummary={normalizedSummaries.length > 0}
           summaries={normalizedSummaries}
