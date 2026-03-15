@@ -1,7 +1,9 @@
 import {UserRole} from './permitions'
+import { getPrimaryRole, normalizeRoles } from "@/lib/access-control";
 
 export type Authorization = {
     role: UserRole;
+    groups: UserRole[];
     scope?: string;
 }
 
@@ -14,8 +16,13 @@ export async function Auth(user: string, pass: string): Promise<Authorization>{
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
 
-    let role = userInfo?.groups[0];
+    const groups = normalizeRoles(userInfo?.groups);
+    const role = getPrimaryRole(groups);
     let scope
+
+    if (!role) {
+        throw new Error("Usuário sem grupo de acesso reconhecido");
+    }
     
     if(userInfo?.scope_id != "*")
     {
@@ -23,6 +30,7 @@ export async function Auth(user: string, pass: string): Promise<Authorization>{
     }
     return {
         scope,
+        groups,
         role
     }
 }

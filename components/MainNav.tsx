@@ -3,35 +3,28 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { UserRole } from "@/app/actions/permitions";
 import { useUser } from "@/context/UserContext";
+import {
+  canAccessAbility,
+  getPrimaryRole,
+  type Ability,
+  type UserRole,
+} from "@/lib/access-control";
 
 type NavItem = {
   label: string;
   path: string;
+  ability: Ability;
 };
 
-const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
-  admin: [
-    { label: "Resumo Aliança", path: "/resumo/alianca" },
-    { label: "Pessoas", path: "/pessoas" },
-    { label: "Centros", path: "/centros" },
-    { label: "Usuários", path: "/admin/usuarios" },
-  ],
-  coord_geral: [
-    { label: "Resumo Aliança", path: "/resumo/alianca" },
-    { label: "Pessoas", path: "/pessoas" },
-    { label: "Centros", path: "/centros" },
-  ],
-  coord_regional: [
-    { label: "Resumo Regional", path: "/resumo/coordenador" },
-    { label: "Centros", path: "/centros" },
-  ],
-  presidente: [
-    { label: "Cadastro", path: "/cadastro" },
-    { label: "Centros", path: "/centros" },
-  ],
-};
+const NAV_ITEMS: NavItem[] = [
+  { label: "Resumo Aliança", path: "/resumo/alianca", ability: "viewAllianceSummary" },
+  { label: "Resumo Regional", path: "/resumo/coordenador", ability: "viewRegionalSummary" },
+  { label: "Cadastro", path: "/cadastro", ability: "viewCadastro" },
+  { label: "Pessoas", path: "/pessoas", ability: "managePeople" },
+  { label: "Centros", path: "/centros", ability: "manageCenters" },
+  { label: "Usuários", path: "/admin/usuarios", ability: "manageUsers" },
+];
 
 function buildHref(path: string, role: UserRole, scope?: string) {
   if (!scope) return path;
@@ -54,10 +47,14 @@ export default function MainNav() {
   const [open, setOpen] = useState(false);
 
   const navItems = useMemo(() => {
-    const role = user?.role as UserRole | undefined;
-    if (!role || !(role in NAV_BY_ROLE)) return [];
-    return NAV_BY_ROLE[role];
-  }, [user?.role]);
+    const roles = user?.groups?.length ? user.groups : user?.role;
+    return NAV_ITEMS.filter((item) => canAccessAbility(roles, item.ability));
+  }, [user?.groups, user?.role]);
+
+  const primaryRole = useMemo(
+    () => getPrimaryRole(user?.groups?.length ? user.groups : user?.role) as UserRole | undefined,
+    [user?.groups, user?.role]
+  );
 
   useEffect(() => {
     // Fecha o menu móvel ao navegar
@@ -65,13 +62,14 @@ export default function MainNav() {
   }, [pathname]);
 
   if (!navItems.length) return null;
+  if (!primaryRole) return null;
 
   return (
     <div className="flex items-center gap-2">
       {/* Desktop */}
       <nav className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-sm text-slate-700">
         {navItems.map((item) => {
-          const href = buildHref(item.path, user!.role as UserRole, user?.scope);
+          const href = buildHref(item.path, primaryRole, user?.scope);
           const isActive = pathname === item.path;
           return (
             <Link
@@ -103,7 +101,7 @@ export default function MainNav() {
           <div className="absolute left-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white shadow-lg z-30">
             <ul className="py-1 text-sm text-slate-800">
               {navItems.map((item) => {
-                const href = buildHref(item.path, user!.role as UserRole, user?.scope);
+                const href = buildHref(item.path, primaryRole, user?.scope);
                 const isActive = pathname === item.path;
                 return (
                   <li key={item.path}>

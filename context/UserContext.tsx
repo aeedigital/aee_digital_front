@@ -1,13 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getPrimaryRole, normalizeRoles, type UserRole } from "@/lib/access-control";
 
 // Definição do tipo para o usuário
 export interface User {
   _id: string;
   user: string;
   pass: string;
-  role: string;
+  role: UserRole;
+  groups: UserRole[];
   scope?: string;
 }
 
@@ -28,7 +30,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser) as Partial<User> & { role?: string; groups?: string[] };
+      const groups = normalizeRoles(parsedUser.groups?.length ? parsedUser.groups : parsedUser.role);
+      const role = getPrimaryRole(groups);
+
+      if (parsedUser._id && parsedUser.user && parsedUser.pass && role) {
+        setUser({
+          _id: parsedUser._id,
+          user: parsedUser.user,
+          pass: parsedUser.pass,
+          role,
+          groups,
+          scope: parsedUser.scope,
+        });
+      }
     }
   }, []);
 

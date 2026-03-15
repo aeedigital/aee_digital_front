@@ -10,7 +10,7 @@ type CadastroInfoApiResponse = {
   updatedAt?: string;
 };
 
-type CadastroInfo = {
+export type CadastroInfo = {
   start: string;
   end: string;
   formId: string;
@@ -53,4 +53,30 @@ export async function getCadastroInfo(): Promise<CadastroInfo> {
   } catch {
     return FALLBACK_CADASTRO_INFO;
   }
+}
+
+export async function saveCadastroInfo(payload: CadastroInfo): Promise<CadastroInfo> {
+  const response = await apiFetch("/cadastro-info", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao salvar período (${response.status})`);
+  }
+
+  const saved = (await response.json()) as CadastroInfoApiResponse | null;
+  if (!hasRequiredFields(saved)) {
+    return payload;
+  }
+
+  return {
+    start: saved.START_DATE,
+    end: saved.END_DATE,
+    formId: saved.FORM_ID,
+    isActive: Boolean(saved.IS_ACTIVE),
+  };
 }

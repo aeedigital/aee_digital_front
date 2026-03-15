@@ -9,7 +9,7 @@ import { User } from "@/context/UserContext";
 import { apiUrl } from "@/lib/api";
 
 interface ResetPasswordButtonProps {
-  callback?: (userData: { _id: string; user: string; pass: string; role: string; scope: string| undefined }) => void;
+  callback?: (userData: User | null) => void;
   user: User;
 }
 
@@ -55,6 +55,7 @@ const ResetPasswordButton = forwardRef<HTMLButtonElement, ResetPasswordButtonPro
             user: user?.user,
             pass: data.newPassword,
             role: user?.role,
+            groups: user?.groups,
             scope: user?.scope,
           });
         }

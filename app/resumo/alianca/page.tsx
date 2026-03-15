@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Regional_Card from "@/components/Regional_Card";
 import { Period } from "@/app/helpers/datePeriodHelper";
 import { Regional } from "@/interfaces/centro.interface";
-import { getCadastroInfo } from "@/app/actions/cadastroInfo";
+import { getCadastroInfo, type CadastroInfo } from "@/app/actions/cadastroInfo";
 import SummariesGraphComponent from "@/components/SummariesGraphComponent";
 import { apiFetch } from "@/lib/api";
+import CadastroPeriodDialog from "@/components/CadastroPeriodDialog";
+import { useUser } from "@/context/UserContext";
+import { canAccessAbility } from "@/lib/access-control";
 
 function SkeletonCard() {
   return (
@@ -23,17 +26,28 @@ function SkeletonCard() {
 }
 
 function RegionalList() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [regionais, setRegionais] = useState<Regional[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period | undefined>();
+  const [cadastroInfo, setCadastroInfo] = useState<CadastroInfo | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
   const noRegionais = !loading && !error && regionais.length === 0;
+  const canManageCadastroPeriod = canAccessAbility(
+    user?.groups?.length ? user.groups : user?.role,
+    "manageCadastroPeriod"
+  );
 
   useEffect(() => {
     async function fetchRegionais() {
+      setLoading(true);
+      setError(null);
+
       try {
         const cadastroInfo = await getCadastroInfo();
+        setCadastroInfo(cadastroInfo);
         setPeriod({ start: cadastroInfo.start, end: cadastroInfo.end });
 
         // Formatar datas para ISO (yyyy-mm-dd)
@@ -84,7 +98,7 @@ function RegionalList() {
     }
 
     fetchRegionais();
-  }, [apiBase]);
+  }, [apiBase, reloadKey]);
 
   if (error) {
     return <div style={{ color: "red", fontWeight: "bold" }}>Erro ao carregar regionais: {error}</div>;
@@ -124,9 +138,24 @@ function RegionalList() {
             color: "#1f2a44",
             fontWeight: 600,
             border: "1px solid #d6e0ff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
           }}
         >
-          Período de avaliação: {formattedPeriod}
+          <span>Período de avaliação: {formattedPeriod}</span>
+          {canManageCadastroPeriod && cadastroInfo && (
+            <CadastroPeriodDialog
+              cadastroInfo={cadastroInfo}
+              onSaved={(nextValue) => {
+                setCadastroInfo(nextValue);
+                setPeriod({ start: nextValue.start, end: nextValue.end });
+                setReloadKey((current) => current + 1);
+              }}
+            />
+          )}
         </div>
       )}
 
