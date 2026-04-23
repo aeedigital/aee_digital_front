@@ -14,6 +14,13 @@ import {
   pickLatestSummary,
   normalizeSummaries,
 } from '@/lib/summaries';
+import { extractCoordinatorFormData } from '@/lib/coordinatorQuestions';
+import {
+  buildSummaryCsvContent,
+  downloadCsvFile,
+  getOrderedFormQuestions,
+  type SummaryCsvRow,
+} from '@/lib/summaryCsv';
 
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -130,32 +137,6 @@ function MainPage() {
       params.append("include", "answers,summaries");
       params.append("limitSummaries", "1");
 
-      const extractFormQuestions = (formObj: any) => {
-
-
-        console.log("Extracting form questions from formObj:", formObj);
-
-        if (!formObj) return { autoavaliacaoQuestion: undefined, questoes: [] as Question[] };
-        const pages = formObj?.PAGES || [];
-        let autoavaliacaoQuestion: Question | undefined;
-        let questoes: Question[] = [];
-
-        for (const page of pages) {
-          const quizAutoAvaliacao = page.QUIZES?.find((q: any) => q.CATEGORY === "Auto Avaliação");
-          const quizCoordenador = page.QUIZES?.find((q: any) => q.CATEGORY === "Coordenador");
-
-          if (quizAutoAvaliacao?.QUESTIONS?.[0]?.GROUP?.[0]) {
-            autoavaliacaoQuestion = quizAutoAvaliacao.QUESTIONS[0].GROUP[0];
-          }
-
-          if (quizCoordenador?.QUESTIONS?.[0]?.GROUP) {
-            questoes = quizCoordenador.QUESTIONS[0].GROUP;
-          }
-        }
-
-        return { autoavaliacaoQuestion, questoes };
-      };
-
       try {
         const centrosWithAnswersUrl = params.toString()
           ? apiUrl(`/regionais/${regionalId}/centros-with-answers?${params.toString()}`)
@@ -177,7 +158,7 @@ function MainPage() {
         setFormulario(form);
 
         // Extrair questões; se faltar, tenta fallback no formulário original
-        let { autoavaliacaoQuestion, questoes } = extractFormQuestions(form);
+        let { autoavaliacaoQuestion, questoes } = extractCoordinatorFormData(form);
 
         setCoordenadores(Array.isArray(pessoasData) ? pessoasData : []);
 
@@ -265,15 +246,7 @@ function MainPage() {
   }
 
   const collectedQuestions = useMemo(() => {
-    const questions: Question[] = [];
-    (formulario as any)?.PAGES?.forEach((page: any) => {
-      page.QUIZES?.forEach((quiz: any) => {
-        quiz.QUESTIONS?.forEach((group: any) => {
-          group.GROUP?.forEach((q: Question) => questions.push(q));
-        });
-      });
-    });
-    return questions;
+    return getOrderedFormQuestions((formulario as any) || undefined);
   }, [formulario]);
 
   const exportLatestSummaries = () => {
@@ -282,9 +255,7 @@ function MainPage() {
       return;
     }
 
-    const headers = ["Centro", "Atualizado em", ...collectedQuestions.map((q) => q.QUESTION)];
-    const csvRows: string[] = [];
-    const escape = (value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const rows: SummaryCsvRow[] = [];
 
     centros.forEach((centro) => {
       const summaries = summaryByCentroId[centro._id];
@@ -294,32 +265,24 @@ function MainPage() {
 
       const latest = pickLatestSummary(summaries);
       if (!latest) return;
-      const answersMap = new Map<string, string>();
-      latest.QUESTIONS?.forEach((q: any) => {
-        answersMap.set(q.QUESTION, q.ANSWER);
-      });
 
-      const row = [
-        centro.NOME_CENTRO || centro.NOME_CURTO || centro._id,
-        latest.updatedAt || latest.createdAt || "",
-        ...collectedQuestions.map((q) => answersMap.get(q._id) ?? "")
-      ];
-      csvRows.push(row.map(escape).join(";"));
+      rows.push({
+        centroNome: centro.NOME_CENTRO || centro.NOME_CURTO || centro._id,
+        latestSummary: latest,
+      });
     });
 
-    if (!csvRows.length) {
+    if (!rows.length) {
       alert("Nenhum resumo encontrado para exportar.");
       return;
     }
 
-    const csvContent = [headers.map(escape).join(";"), ...csvRows].join("\r\n");
-    const blob = new Blob(["\uFEFF", csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "resumos_coordenador.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    const csvContent = buildSummaryCsvContent({
+      questions: collectedQuestions,
+      rows,
+    });
+
+    downloadCsvFile("resumos_coordenador.csv", csvContent);
   };
 
   return (

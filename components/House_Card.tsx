@@ -19,6 +19,7 @@ import { AcoesCoordenadorCentro } from '@components/AcoesCoordenadorCentro';
 import { apiUrl } from '@/lib/api';
 import { isRequiredAnswerFilled, pickCurrentAnswer } from '@/lib/requiredAnswers';
 import { normalizeSummaries, pickLatestSummary } from '@/lib/summaries';
+import { getCoordinatorQuestionsFromAnswers } from '@/lib/coordinatorQuestions';
 
 interface CardProps {
   centro: Centro;
@@ -125,13 +126,17 @@ const House_Card: React.FC<CardProps> = ({
     setSituacao(answerAvaliacao?.ANSWER || '');
 
     // B) Preenche questoesCoordenador
-    const coordenadorQAs = coordenador_questions.map((question) => {
-      const answer = allAnswers.find((ans) => ans.QUESTION_ID === question._id);
-      return { question, answer };
-    });
+    const coordenadorQAs = getCoordinatorQuestionsFromAnswers(form, allAnswers);
 
-    setQuestoesCoordenador(coordenadorQAs);
-  }, [allAnswers, avaliacao_question, coordenador_questions]);
+    setQuestoesCoordenador(
+      coordenadorQAs.length
+        ? coordenadorQAs
+        : coordenador_questions.map((question) => ({
+            question,
+            answer: allAnswers.find((ans) => ans.QUESTION_ID === question._id),
+          }))
+    );
+  }, [allAnswers, avaliacao_question, coordenador_questions, form]);
 
   // 3. Verifica quais perguntas obrigatórias não foram respondidas
   useEffect(() => {

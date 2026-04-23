@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Regional_Card from "@/components/Regional_Card";
 import { Period } from "@/app/helpers/datePeriodHelper";
@@ -8,6 +9,7 @@ import { getCadastroInfo, type CadastroInfo } from "@/app/actions/cadastroInfo";
 import SummariesGraphComponent from "@/components/SummariesGraphComponent";
 import { apiFetch } from "@/lib/api";
 import CadastroPeriodDialog from "@/components/CadastroPeriodDialog";
+import ExportAllianceSummariesButton from "@/components/ExportAllianceSummariesButton";
 import { useUser } from "@/context/UserContext";
 import { canAccessAbility } from "@/lib/access-control";
 
@@ -146,16 +148,40 @@ function RegionalList() {
           }}
         >
           <span>Período de avaliação: {formattedPeriod}</span>
-          {canManageCadastroPeriod && cadastroInfo && (
-            <CadastroPeriodDialog
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <ExportAllianceSummariesButton
               cadastroInfo={cadastroInfo}
-              onSaved={(nextValue) => {
-                setCadastroInfo(nextValue);
-                setPeriod({ start: nextValue.start, end: nextValue.end });
-                setReloadKey((current) => current + 1);
-              }}
+              disabled={loading || noRegionais}
+              regionais={regionais}
             />
-          )}
+            <Link
+              href="/resumo/alianca/composicao"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "8px 14px",
+                borderRadius: "999px",
+                border: "1px solid #cbd5e1",
+                background: "#ffffff",
+                color: "#0f172a",
+                fontSize: "14px",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Ver composição das regionais
+            </Link>
+            {canManageCadastroPeriod && cadastroInfo && (
+              <CadastroPeriodDialog
+                cadastroInfo={cadastroInfo}
+                onSaved={(nextValue) => {
+                  setCadastroInfo(nextValue);
+                  setPeriod({ start: nextValue.start, end: nextValue.end });
+                  setReloadKey((current) => current + 1);
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
 
