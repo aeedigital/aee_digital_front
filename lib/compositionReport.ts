@@ -90,7 +90,7 @@ export async function loadCompositionData() {
     if (dateFrom) params.append("dateFrom", dateFrom);
     if (dateTo) params.append("dateTo", dateTo);
     params.append("include", "answers,summaries");
-    params.append("limitSummaries", "1");
+    params.append("sortBy", "updatedAt:desc");
 
     const path = params.toString()
       ? `/regionais/${regional._id}/centros-with-answers?${params.toString()}`

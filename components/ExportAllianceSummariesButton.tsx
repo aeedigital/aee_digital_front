@@ -171,7 +171,7 @@ export default function ExportAllianceSummariesButton({
           if (dateFrom) params.append("dateFrom", dateFrom);
           if (dateTo) params.append("dateTo", dateTo);
           params.append("include", "answers,summaries");
-          params.append("limitSummaries", "1");
+          params.append("sortBy", "updatedAt:desc");
 
           const path = params.toString()
             ? `/regionais/${regionalId}/centros-with-answers?${params.toString()}`

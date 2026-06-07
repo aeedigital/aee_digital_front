@@ -135,7 +135,7 @@ function MainPage() {
       if (dateFromISO) params.append("dateFrom", dateFromISO);
       if (dateToISO) params.append("dateTo", dateToISO);
       params.append("include", "answers,summaries");
-      params.append("limitSummaries", "1");
+      params.append("sortBy", "updatedAt:desc");
 
       try {
         const centrosWithAnswersUrl = params.toString()
