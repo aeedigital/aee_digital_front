@@ -3,10 +3,16 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
+		"harness:setup": "bash .harness/scripts/setup.sh",
+		"harness:check": "bash .harness/scripts/check.sh",
+		"harness:check:quick": "bash .harness/scripts/check.sh --quick",
+		"harness:preflight": "node .harness/scripts/preflight.mjs",
+		"harness:smoke": "bash .harness/scripts/smoke.sh",
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
+		"typecheck": "tsc --noEmit",
 		"deploy": "bash scripts/deploy.sh"
 	},
 	"dependencies": {

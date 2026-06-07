@@ -50,6 +50,15 @@ Guia para agentes de codigo neste repositorio (`aee_digital_front`).
 - `npm run start`
 - `npm run deploy` (build estatico + sync S3 + invalidacao CloudFront)
 
+### Harness para agentes
+
+- Preparar workspace: `npm run harness:setup`.
+- Feedback rapido durante edicoes: `npm run harness:check:quick`.
+- Validacao obrigatoria antes de concluir: `npm run harness:check`.
+- Validar acesso a API antes do export: `npm run harness:preflight`.
+- Validar apenas o ultimo export: `npm run harness:smoke`.
+- Contrato e detalhes operacionais: `.harness/README.md`.
+
 ## 4) Fluxos criticos (nao quebrar)
 
 ### Autenticacao e sessao
@@ -106,9 +115,8 @@ Guia para agentes de codigo neste repositorio (`aee_digital_front`).
 
 Este repositorio nao possui suite de testes automatizados. O minimo para toda alteracao:
 
-1. rodar `npm run lint`;
-2. rodar `npm run build`;
-3. validar manualmente o fluxo alterado no navegador.
+1. rodar `npm run harness:check`;
+2. validar manualmente o fluxo alterado no navegador.
 
 Checklist manual sugerido por area:
 
@@ -145,4 +153,3 @@ Checklist manual sugerido por area:
   - reportar arquivos alterados;
   - reportar comandos executados e resultado;
   - registrar qualquer risco residual.
-
