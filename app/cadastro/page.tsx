@@ -5,10 +5,36 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingPlaceholder } from "@/components/LoadingPlaceholder";
 import { QuizComponent } from "@components/QuizComponent";
 import { ValidationTab } from "@components/ValidationTab";
-import { Answer, Page } from "@/interfaces/form.interface";
+import { Answer, Form, Page } from "@/interfaces/form.interface";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiUrl } from "@/lib/api";
 import { fetchJsonCached } from "@/lib/fetchWithCache";
+import {
+  buildCadastroAnswersCache,
+  getCadastroVisiblePages,
+  selectCurrentCadastroForm,
+} from "@/lib/cadastroViewModel";
+
+type SummaryForCadastro = {
+  CENTRO_ID: string;
+  QUESTIONS?: Array<{
+    _id: string;
+    ANSWER?: string;
+    QUESTION: string;
+  }>;
+};
+
+async function fetchJsonNoStore<T>(path: string): Promise<T> {
+  const response = await fetch(apiUrl(path), { cache: "no-store" });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Erro ao buscar ${path} (${response.status})`);
+  }
+
+  const text = await response.text();
+  return (text ? JSON.parse(text) : null) as T;
+}
 
 export default function CadastroPageWrapper() {
   return (
@@ -54,42 +80,28 @@ function CadastroPage() {
       setIsLoading(true);
 
       try {
-        const formResponse = await fetchJsonCached(
+        const formResponse = (await fetchJsonCached(
           apiUrl("/forms?sortBy=VERSION:desc&NAME=Cadastro de Informações Anual")
-        );
+        )) as Form[];
 
-        let answers;
+        let answers: Answer[];
 
         if (summaryId) {
-          const summary = await fetch(apiUrl(`/summaries/${summaryId}`), { cache: "no-store" }).then((r) =>
-            r.json()
-          );
-          answers = summary?.QUESTIONS.map((answer: any) => ({
+          const summary = await fetchJsonNoStore<SummaryForCadastro>(`/summaries/${summaryId}`);
+          answers = (summary?.QUESTIONS || []).map((answer) => ({
             QUESTION_ID: answer.QUESTION,
             CENTRO_ID: summary.CENTRO_ID,
-            ANSWER: answer.ANSWER,
+            ANSWER: answer.ANSWER ?? "",
             _id: answer._id,
+            QUIZ_ID: "",
           }));
         } else {
-          answers = await fetch(apiUrl(`/answers?CENTRO_ID=${centroId}`), { cache: "no-store" }).then((r) =>
-            r.json()
-          );
+          answers = await fetchJsonNoStore<Answer[]>(`/answers?CENTRO_ID=${centroId}`);
         }
 
-        const cache: Record<string, any[]> = {};
-        answers.forEach((answer: Answer) => {
-          const questionId = answer.QUESTION_ID;
-          if (!cache[questionId]) {
-            cache[questionId] = [];
-          }
-          cache[questionId].push(answer);
-        });
-
-        const firstFormResponse = formResponse[0];
-
-        const formWithoutRolePages = firstFormResponse.PAGES.filter(
-          (page: Page) => page.ROLE !== "coord_regional"
-        );
+        const cache = buildCadastroAnswersCache(answers);
+        const firstFormResponse = selectCurrentCadastroForm(formResponse);
+        const formWithoutRolePages = getCadastroVisiblePages(firstFormResponse);
 
         setAnswersCache(cache);
         setAllPages(firstFormResponse.PAGES);

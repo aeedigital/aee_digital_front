@@ -18,9 +18,12 @@ npm run lint
 echo "Executando verificacao de tipos..."
 npm run typecheck
 
+echo "Executando testes automatizados..."
+npm run test:run
+
 if [[ "$MODE" == "--quick" ]]; then
-  echo "Checagem rapida concluida."
-  exit 0
+	echo "Checagem rapida concluida."
+	exit 0
 fi
 
 echo "Validando acesso a API..."

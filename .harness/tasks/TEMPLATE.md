@@ -1,25 +1,34 @@
-# Tarefa
+# Tasks: Create Order
 
-## Objetivo
+## Status
 
-Descreva o resultado observavel esperado.
+In progress
 
-## Escopo
+## Implementation tasks
 
-- Arquivos e fluxos que podem ser alterados.
-- Comportamentos que devem permanecer inalterados.
+- [ ] Create Order entity
+- [ ] Create CreateOrderUseCase
+- [ ] Create OrderRepository port
+- [ ] Create in-memory repository for tests
+- [ ] Create HTTP controller
+- [ ] Create request DTO validation
+- [ ] Create unit tests for CreateOrderUseCase
+- [ ] Create integration test for POST /orders
+- [ ] Create harness scenario for order creation
+- [ ] Update module wiring
 
-## Criterios de aceite
+## Validation tasks
 
-- [ ] Criterio funcional verificavel.
-- [ ] Perfis de usuario relevantes preservados.
-- [ ] Regras LGPD revisadas quando o fluxo for publico.
-- [ ] `npm run harness:check` concluido.
+- [ ] Run lint
+- [ ] Run unit tests
+- [ ] Run integration tests
+- [ ] Run harness
+- [ ] Run build
+- [ ] Run full check
 
-## Validacao manual
+## Out of scope
 
-Registre rota, perfil, dados de entrada e resultado esperado para cada cenario.
-
-## Riscos
-
-Liste dependencias externas, migracoes, dados sensiveis e riscos residuais.
+- Payment
+- Inventory reservation
+- Email notification
+- Order cancellation

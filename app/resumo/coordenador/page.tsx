@@ -11,16 +11,11 @@ import { Centro } from '@/interfaces/centro.interface';
 import { Pessoa } from '@/interfaces/pessoas.interface';
 import { apiUrl } from '@/lib/api';
 import {
-  pickLatestSummary,
   normalizeSummaries,
 } from '@/lib/summaries';
 import { extractCoordinatorFormData } from '@/lib/coordinatorQuestions';
-import {
-  buildSummaryCsvContent,
-  downloadCsvFile,
-  getOrderedFormQuestions,
-  type SummaryCsvRow,
-} from '@/lib/summaryCsv';
+import { buildCadastroCsvContentForCentros } from '@/lib/cadastroCsvExport';
+import { downloadCsvFile } from '@/lib/summaryCsv';
 
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -67,6 +62,7 @@ function MainPage() {
   const [totalCentros, setTotalCentros] = useState(0);
   const [summaryByCentroId, setSummaryByCentroId] = useState<Record<string, Summary[]>>({});
   const [answersByCentroId, setAnswersByCentroId] = useState<{ [key: string]: Answer[] }>({});
+  const [exportingCsv, setExportingCsv] = useState(false);
 
   const hasLoadedRef = useRef(false); // Use useRef instead of useState
   const [avaliacaoQuestion, setAvaliacaoQuestion] = useState<Question>({
@@ -90,7 +86,7 @@ function MainPage() {
     NOME_CENTRO: "",
     NOME_CURTO: "",
   });
-  const canExport = !loading && centros.length > 0;
+  const canExport = !loading && centros.length > 0 && !exportingCsv;
 
   useEffect(() => {
     async function fetchData() {
@@ -245,44 +241,26 @@ function MainPage() {
     }
   }
 
-  const collectedQuestions = useMemo(() => {
-    return getOrderedFormQuestions((formulario as any) || undefined);
-  }, [formulario]);
-
-  const exportLatestSummaries = () => {
-    if (!collectedQuestions.length) {
-      alert("Não foi possível encontrar perguntas para montar o arquivo.");
+  const exportCadastroCsv = async () => {
+    if (!centros.length || exportingCsv) {
       return;
     }
 
-    const rows: SummaryCsvRow[] = [];
+    try {
+      setExportingCsv(true);
 
-    centros.forEach((centro) => {
-      const summaries = summaryByCentroId[centro._id];
-      if (!summaries || summaries.length === 0) {
-        return;
-      }
-
-      const latest = pickLatestSummary(summaries);
-      if (!latest) return;
-
-      rows.push({
-        centroNome: centro.NOME_CENTRO || centro.NOME_CURTO || centro._id,
-        latestSummary: latest,
+      const csvContent = await buildCadastroCsvContentForCentros({
+        centros,
       });
-    });
 
-    if (!rows.length) {
-      alert("Nenhum resumo encontrado para exportar.");
-      return;
+      downloadCsvFile("cadastro_regional.csv", csvContent);
+    } catch (error: unknown) {
+      console.error("[Resumo/Coordenador] Falha ao exportar CSV", error);
+      const message = error instanceof Error ? error.message : "Não foi possível exportar os dados exibidos.";
+      alert(message);
+    } finally {
+      setExportingCsv(false);
     }
-
-    const csvContent = buildSummaryCsvContent({
-      questions: collectedQuestions,
-      rows,
-    });
-
-    downloadCsvFile("resumos_coordenador.csv", csvContent);
   };
 
   return (
@@ -314,11 +292,11 @@ function MainPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={exportLatestSummaries}
+                  onClick={exportCadastroCsv}
                   disabled={!canExport}
                   className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
                 >
-                  Exportar últimos resumos (CSV)
+                  {exportingCsv ? "Exportando CSV..." : "Exportar dados exibidos (CSV)"}
                 </button>
                 {user?.role === "admin" && (
                   <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />

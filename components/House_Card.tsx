@@ -372,6 +372,7 @@ const House_Card: React.FC<CardProps> = ({
       <div className="mt-3">
         <AcoesCoordenadorCentro
           centroId={centro._id}
+          centro={centro}
           coordQuestionsAnswered={questoesCoordenador}
           onVerRespostas={handleCardClick}
           onVerHistorico={handleHistoryClick}

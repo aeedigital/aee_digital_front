@@ -1,109 +1,163 @@
-import { Form, Question, Summary } from "@/interfaces/form.interface";
+import { format } from "date-fns";
 
-export type SummaryCsvRow = {
+import { Answer, Form, Page, Question } from "@/interfaces/form.interface";
+import { ProjectedCadastroPage } from "@/lib/cadastroViewModel";
+
+export type CadastroCsvRow = {
+  centroId: string;
   centroNome: string;
-  latestSummary?: Summary;
+  centroNomeCurto?: string;
+  form: Form;
+  projectedPages: ProjectedCadastroPage[];
   regionalNome?: string;
 };
 
-type BuildSummaryCsvOptions = {
-  questions: Question[];
-  rows: SummaryCsvRow[];
+type BuildCadastroCsvOptions = {
   includeRegional?: boolean;
+  rows: CadastroCsvRow[];
 };
 
-const LEGACY_QUESTION_ID_ALIASES: Record<string, string[]> = {
-  // Compatibilidade temporária com summaries antigos do formulário 655d1d52e88893fbf20e6e00.
-  "659467792f490be057cc4340": ["61df432fdf23b90014a944a5"], // Seu E-mail
-  "659466f02f490be057cc433e": ["61df432fdf23b90014a944a2"], // Seu Nome
-  "659467342f490be057cc433f": ["61df432fdf23b90014a944a3"], // Seu Telefone
-  "659467a52f490be057cc4341": ["61df432fdf23b90014a944a6"], // Autorização de divulgação
-  "659468cb2f490be057cc4344": ["61df432fdf23b90014a94556"], // Ingressaram desde a fundação do centro
-  "659468972f490be057cc4343": ["61df432fdf23b90014a94555"], // Ingressaram no último ano
-  "6594686b2f490be057cc4342": ["61df432fdf23b90014a94554"], // Encaminhadas para ingresso no último ano
+type CadastroCsvColumn = {
+  header: string;
+  groupIndex: number;
+  occurrenceIndex: number;
+  question: Question;
+  questionIndex: number;
+  quizIndex: number;
+  visiblePageIndex: number;
 };
 
-export function getOrderedFormQuestions(form?: Partial<Form> | null): Question[] {
-  const questions: Question[] = [];
-
-  form?.PAGES?.forEach((page) => {
-    page.QUIZES?.forEach((quiz) => {
-      quiz.QUESTIONS?.forEach((group) => {
-        group.GROUP?.forEach((question) => {
-          questions.push(question);
-        });
-      });
-    });
-  });
-
-  return questions;
+function getPageName(page: Page, fallbackIndex: number) {
+  const pageWithLegacyName = page as Page & { NAME?: string };
+  return page.PAGE_NAME || pageWithLegacyName.NAME || `Página ${fallbackIndex + 1}`;
 }
 
-function escapeCsvValue(value: unknown) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+function neutralizeCsvFormula(value: string) {
+  return /^[=+\-@]/.test(value) ? `'${value}` : value;
 }
 
-function formatAnswerForCsv(value: string) {
-  const normalizedValue = value.trim().toLowerCase();
+export function escapeCsvValue(value: unknown) {
+  const safeValue = neutralizeCsvFormula(String(value ?? ""));
+  return `"${safeValue.replace(/"/g, '""')}"`;
+}
 
-  if (normalizedValue === "true") {
-    return "SIM";
+function isValidDate(value: Date) {
+  return value instanceof Date && !Number.isNaN(value.getTime());
+}
+
+export function formatCadastroAnswerForCsv(answer: Answer | undefined, question: Pick<Question, "ANSWER_TYPE">) {
+  const rawValue = answer?.ANSWER;
+
+  if (rawValue === null || rawValue === undefined) {
+    return "";
   }
 
-  if (normalizedValue === "false") {
-    return "NÃO";
+  const value = String(rawValue);
+  if (!value.trim()) {
+    return "";
+  }
+
+  if (question.ANSWER_TYPE === "Boolean" || question.ANSWER_TYPE === "Switch") {
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (normalizedValue === "true") {
+      return "SIM";
+    }
+
+    if (normalizedValue === "false") {
+      return "NÃO";
+    }
+  }
+
+  if (question.ANSWER_TYPE === "Date") {
+    const date = new Date(value);
+    return isValidDate(date) ? format(date, "dd/MM/yyyy") : value;
   }
 
   return value;
 }
 
-function getSummaryAnswersMap(summary?: Summary) {
-  const answersMap = new Map<string, string>();
+function getMaxOccurrencesForGroup(rows: CadastroCsvRow[], visiblePageIndex: number, quizIndex: number, groupIndex: number) {
+  return Math.max(
+    1,
+    ...rows.map((row) => {
+      return (
+        row.projectedPages[visiblePageIndex]?.quizzes[quizIndex]?.groups[groupIndex]?.occurrences.length || 1
+      );
+    })
+  );
+}
 
-  summary?.QUESTIONS?.forEach((item) => {
-    if (!item?.QUESTION) return;
-    answersMap.set(item.QUESTION, item.ANSWER ?? "");
+function buildCadastroCsvColumns(rows: CadastroCsvRow[]): CadastroCsvColumn[] {
+  const firstRow = rows[0];
+  if (!firstRow) return [];
+
+  const columns: CadastroCsvColumn[] = [];
+
+  firstRow.projectedPages.forEach((page, visiblePageIndex) => {
+    page.quizzes.forEach((quiz, quizIndex) => {
+      quiz.groups.forEach((group, groupIndex) => {
+        const maxOccurrences = getMaxOccurrencesForGroup(rows, visiblePageIndex, quizIndex, groupIndex);
+
+        for (let occurrenceIndex = 0; occurrenceIndex < maxOccurrences; occurrenceIndex += 1) {
+          group.questionGroup.GROUP.forEach((question, questionIndex) => {
+            columns.push({
+              groupIndex,
+              occurrenceIndex,
+              question,
+              questionIndex,
+              quizIndex,
+              visiblePageIndex,
+              header: [
+                getPageName(page.page, visiblePageIndex),
+                quiz.category || `Quiz ${quizIndex + 1}`,
+                `Grupo ${groupIndex + 1}`,
+                `Ocorrência ${occurrenceIndex + 1}`,
+                question.QUESTION,
+              ].join(" / "),
+            });
+          });
+        }
+      });
+    });
   });
 
-  return answersMap;
+  return columns;
 }
 
-function getAnswerForQuestion(answersMap: Map<string, string>, questionId: string) {
-  const currentValue = answersMap.get(questionId) ?? "";
-  if (currentValue.trim()) {
-    return formatAnswerForCsv(currentValue);
-  }
+function getCellValue(row: CadastroCsvRow, column: CadastroCsvColumn) {
+  const answer =
+    row.projectedPages[column.visiblePageIndex]?.quizzes[column.quizIndex]?.groups[column.groupIndex]?.occurrences[
+      column.occurrenceIndex
+    ]?.questionsAnswered[column.questionIndex]?.answer;
 
-  const legacyQuestionIds = LEGACY_QUESTION_ID_ALIASES[questionId] || [];
-  for (const legacyQuestionId of legacyQuestionIds) {
-    const legacyValue = answersMap.get(legacyQuestionId) ?? "";
-    if (legacyValue.trim()) {
-      return formatAnswerForCsv(legacyValue);
-    }
-  }
-
-  return "";
+  return formatCadastroAnswerForCsv(answer, column.question);
 }
 
-export function buildSummaryCsvContent({
-  questions,
-  rows,
-  includeRegional = false,
-}: BuildSummaryCsvOptions) {
-  const headers = [
+export function buildCadastroCsvContent({ includeRegional = false, rows }: BuildCadastroCsvOptions) {
+  const fixedHeaders = [
     ...(includeRegional ? ["Regional"] : []),
+    "Centro ID",
     "Centro",
-    "Atualizado em",
-    ...questions.map((question) => question.QUESTION),
+    "Nome curto",
+    "Formulário ID",
+    "Formulário",
+    "Versão do formulário",
   ];
 
+  const dynamicColumns = buildCadastroCsvColumns(rows);
+  const headers = [...fixedHeaders, ...dynamicColumns.map((column) => column.header)];
+
   const csvRows = rows.map((row) => {
-    const answersMap = getSummaryAnswersMap(row.latestSummary);
     const values = [
       ...(includeRegional ? [row.regionalNome ?? ""] : []),
+      row.centroId,
       row.centroNome,
-      row.latestSummary?.updatedAt || row.latestSummary?.createdAt || "",
-      ...questions.map((question) => getAnswerForQuestion(answersMap, question._id)),
+      row.centroNomeCurto ?? "",
+      row.form._id,
+      row.form.NAME,
+      row.form.VERSION,
+      ...dynamicColumns.map((column) => getCellValue(row, column)),
     ];
 
     return values.map(escapeCsvValue).join(";");

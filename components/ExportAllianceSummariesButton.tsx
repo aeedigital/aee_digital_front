@@ -4,15 +4,9 @@ import { useState } from "react";
 
 import { getCadastroInfo, type CadastroInfo } from "@/app/actions/cadastroInfo";
 import { Regional, Centro } from "@/interfaces/centro.interface";
-import { Form, Summary } from "@/interfaces/form.interface";
 import { apiFetch } from "@/lib/api";
-import {
-  buildSummaryCsvContent,
-  downloadCsvFile,
-  getOrderedFormQuestions,
-  type SummaryCsvRow,
-} from "@/lib/summaryCsv";
-import { normalizeSummaries, pickLatestSummary } from "@/lib/summaries";
+import { buildCadastroCsvContentForCentros, type CadastroCsvCentro } from "@/lib/cadastroCsvExport";
+import { downloadCsvFile } from "@/lib/summaryCsv";
 
 type RegionalLike = Partial<Regional> & {
   id?: string;
@@ -29,6 +23,8 @@ type CentroWithSummaries = Centro & {
 const REGIONAL_CONCURRENCY = 3;
 const MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 500;
+
+class NonRetryableFetchError extends Error {}
 
 function normalizeDateToISO(value?: string) {
   if (!value) return undefined;
@@ -76,11 +72,15 @@ async function fetchJsonWithRetry<T>(path: string) {
           continue;
         }
 
-        throw new Error(message);
+        throw new NonRetryableFetchError(message);
       }
 
       return (await response.json()) as T;
     } catch (error) {
+      if (error instanceof NonRetryableFetchError) {
+        throw error;
+      }
+
       lastError = error;
 
       if (attempt < MAX_RETRIES) {
@@ -147,16 +147,7 @@ export default function ExportAllianceSummariesButton({
       const dateFrom = normalizeDateToISO(activeCadastroInfo?.start);
       const dateTo = normalizeDateToISO(activeCadastroInfo?.end);
 
-      const formData = await fetchJsonWithRetry<Form | Form[]>(`/forms/${activeCadastroInfo.formId}`);
-      const form = (Array.isArray(formData) ? formData[0] : formData) as Form | undefined;
-      const questions = getOrderedFormQuestions(form);
-
-      if (!questions.length) {
-        alert("Não foi possível encontrar perguntas do formulário para exportação.");
-        return;
-      }
-
-      const regionalRows = await mapWithConcurrency(
+      const regionalCenters = await mapWithConcurrency(
         regionais,
         REGIONAL_CONCURRENCY,
         async (regional) => {
@@ -180,37 +171,29 @@ export default function ExportAllianceSummariesButton({
           const payload = await fetchJsonWithRetry<{ centros?: CentroWithSummaries[] }>(path);
           const centros = Array.isArray(payload?.centros) ? payload.centros : [];
 
-          return centros.map<SummaryCsvRow>((centro) => {
-            const latestSummary = pickLatestSummary(
-              normalizeSummaries((centro as { summaries?: Summary[] }).summaries)
-            );
-
-            return {
-              regionalNome,
-              centroNome: centro.NOME_CENTRO || centro.NOME_CURTO || centro._id,
-              latestSummary,
-            };
-          });
+          return centros.map<CadastroCsvCentro>((centro) => ({
+            ...centro,
+            regionalNome,
+          }));
         }
       );
 
-      const rows = regionalRows.flat();
+      const centros = regionalCenters.flat();
 
-      if (!rows.length) {
+      if (!centros.length) {
         alert("Nenhum centro encontrado para exportar.");
         return;
       }
 
-      const csvContent = buildSummaryCsvContent({
-        questions,
-        rows,
+      const csvContent = await buildCadastroCsvContentForCentros({
+        centros,
         includeRegional: true,
       });
 
-      downloadCsvFile("resumos_alianca.csv", csvContent);
+      downloadCsvFile("cadastro_alianca.csv", csvContent);
     } catch (error: any) {
       console.error("[Resumo/Aliança] Falha ao exportar CSV", error);
-      alert(error?.message || "Não foi possível exportar o CSV da Aliança.");
+      alert(error?.message || "Não foi possível exportar os dados exibidos da Aliança.");
     } finally {
       setExporting(false);
     }
@@ -237,7 +220,7 @@ export default function ExportAllianceSummariesButton({
         cursor: isDisabled ? "not-allowed" : "pointer",
       }}
     >
-      {exporting ? "Exportando CSV..." : "Exportar todos os resumos (CSV)"}
+      {exporting ? "Exportando CSV..." : "Exportar dados exibidos da Aliança (CSV)"}
     </button>
   );
 }

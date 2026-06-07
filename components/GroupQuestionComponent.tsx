@@ -7,6 +7,7 @@ import { Question, QuestionGroup, Answer } from "@/interfaces/form.interface";
 import { useToast } from "@/hooks/use-toast";
 import { FiPlus, FiTrash } from "react-icons/fi";
 import { apiUrl } from "@/lib/api";
+import { projectCadastroQuestionGroup } from "@/lib/cadastroViewModel";
 
 const parseJsonSafe = async (res: Response) => {
   const text = await res.text();
@@ -56,18 +57,6 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     [createLocalGroupKey]
   );
   
-
-  const setGroupCache = useCallback(() => {
-    const localCache: Record<string, Answer[]> = {};
-
-    questionGroup.GROUP.forEach((question) => {
-      if (initialCache[question._id]) {
-        localCache[question._id] = initialCache[question._id];
-      }
-    });
-
-    return localCache;
-  }, [questionGroup.GROUP, initialCache]);
 
   const removeAnswer = async(questionId:string, answerId:string): Promise<any> =>{
 
@@ -165,36 +154,21 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
   };
 
   useEffect(() => {
-    async function fetchAnswers() {
-      const tempAnswerGroups: QuestionAnswerGroup[] = [];
+    function projectAnswers() {
+      const projectedGroup = projectCadastroQuestionGroup(questionGroup, initialCache, { centroId });
+      const nextGroups = projectedGroup.occurrences.map((occurrence) => {
+        const questionsAnswered = occurrence.questionsAnswered.map(({ question, answer }) => ({
+          question,
+          answer,
+        }));
 
-      const groupCache = setGroupCache()
-
-      let answersLength =1
-      if(questionGroup.IS_MULTIPLE){
-        answersLength = Math.max(...Object.values(groupCache).map((a) => a.length), 1);
-      }
-
-      for (let i = 0; i < answersLength; i++) {
-        const questionsAnswered = questionGroup.GROUP.map((question) => {
-          const answer = groupCache[question._id]?.[i] || {
-            CENTRO_ID: centroId,
-            QUIZ_ID: "",
-            QUESTION_ID: question._id,
-            ANSWER: "",
-            _id: "",
-          };
-
-          return { question, answer };
-        });
-
-        const group: QuestionAnswerGroup = {
+        return {
           groupKey: buildGroupKey(questionsAnswered),
           questionsAnswered,
         };
-        tempAnswerGroups.push(group);
-      }
-      setAnswerGroups(tempAnswerGroups);
+      });
+
+      setAnswerGroups(nextGroups);
     }
 
     // Initialize empty groups only once to avoid flicker on updates
@@ -202,8 +176,8 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
       setAnswerGroups(initializeEmptyGroups(false));
       initializedRef.current = true;
     }
-    fetchAnswers();
-  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, setGroupCache, buildGroupKey]);
+    projectAnswers();
+  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, buildGroupKey]);
 
   return (
     <div className="space-y-6">

@@ -2,18 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Eye, History, CheckCircle } from "lucide-react";
 import { CoordAnalisisButton } from "@components/CoordAnalisisButton";
 import { QuestionAnswer, Summary } from "@/interfaces/form.interface";
+import { Centro } from "@/interfaces/centro.interface";
+import ExportCenterCadastroCsvButton from "@/components/ExportCenterCadastroCsvButton";
 
 interface AcoesCentroProps {
   onVerRespostas: () => void;
   onVerHistorico: () => void;
   onFinalizarAnalise: (status: boolean) => void;
   centroId: string;
+  centro: Centro;
   coordQuestionsAnswered: QuestionAnswer[];
   hasSummary: boolean;
   summaries?: Summary[];
 }
 
-export function AcoesCoordenadorCentro({ onVerRespostas, onVerHistorico, onFinalizarAnalise, centroId, coordQuestionsAnswered,
+export function AcoesCoordenadorCentro({ onVerRespostas, onVerHistorico, onFinalizarAnalise, centroId, centro, coordQuestionsAnswered,
   hasSummary, summaries }: AcoesCentroProps) {
   return (
     <div className="flex flex-wrap gap-4 p-4 w-full">
@@ -34,6 +37,8 @@ export function AcoesCoordenadorCentro({ onVerRespostas, onVerHistorico, onFinal
         <History className="w-5 h-5" />
         Histórico
       </Button>
+
+      <ExportCenterCadastroCsvButton centro={centro} disabled={!centroId} />
 
       {/* Botão Finalizar Análise */}
       <CoordAnalisisButton
