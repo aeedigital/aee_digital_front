@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress
+Automated complete
 
 ## Implementation tasks
 
@@ -42,7 +42,7 @@ In progress
 - [x] Run parity tests
 - [x] Run `npm run harness:check:quick`
 - [x] Run `npm run harness:preflight`
-- [ ] Run `npm run harness:check`
+- [x] Run `npm run harness:check`
 - [ ] Manually compare `/cadastro?centroId=:id` with center CSV export
 - [ ] Manually compare regional `/resumo/coordenador` CSV export with opened center cadastro pages
 - [ ] Manually compare Alliance `/resumo/alianca` CSV export across at least two regionals

@@ -54,6 +54,15 @@ describe("summaryCsv cadastro serialization", () => {
     expect(formatCadastroAnswerForCsv(answersCentroA[8], questions.memberName)).toBe("");
   });
 
+  it("does not export coord_regional pages", () => {
+    const content = buildCadastroCsvContent({
+      rows: [buildRow(centroA)],
+    });
+
+    expect(content).not.toContain("Coordenação / Análise");
+    expect(content).not.toContain("Dados gerais / Análise");
+  });
+
   it("escapes values and neutralizes formula prefixes", () => {
     expect(escapeCsvValue('valor "A"; B')).toBe('"valor ""A""; B"');
     expect(escapeCsvValue("=1+1")).toBe('"\'=1+1"');
