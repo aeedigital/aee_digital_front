@@ -1,6 +1,6 @@
 // components/Card.tsx
 'use client'; // Adicione esta linha para garantir que este é um componente do cliente
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -11,93 +11,97 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-import { appendDatePeriod, Period } from '@/helpers/datePeriodHelper';
+import { Period } from '@/app/helpers/datePeriodHelper';
 
 interface CardProps {
   nome: string;
   pais: string;
   regionalId: string;
-  period: Period | undefined;
+  centrosCount?: number;
+  finalizadosCount?: number;
+  period?: Period;
 }
 
-const Regional_Card: React.FC<CardProps> = ({ nome, pais, regionalId, period }) => {
-  const [centrosCount, setCentrosCount] = useState<number | null>(null);
-  const [finalizadosCount, setFinalizadosCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    async function fetchCentrosCount() {
-
-      const res = await fetch(`/api/centros?REGIONAL=${regionalId}&STATUS=Pendente,Integrada,Inscrita`);
-      
-      if (!res.ok) {
-        console.error(`Failed to fetch centers for regional ${regionalId}`);
-        return;
-      }
-
-      const centros = await res.json();
-      setCentrosCount(centros.length);
-
-      let summaryPath = `/api/regionais/${regionalId}/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt`;
-
-      if (period?.start && period?.end) {
-        summaryPath = appendDatePeriod(summaryPath, period);
-      }
-
-      const summaryRes = await fetch(summaryPath);
-      const data = await summaryRes.json();
-
-      let finalizadosTotal = 0;
-
-      if (data.length > 0) {
-        const centroIdsSet = new Set(centros.map((centro: any) => centro._id));
-        const uniqueCentroIds = new Set(
-          data.map((item: any) => item.CENTRO_ID).filter((id: any) => centroIdsSet.has(id))
-        );
-        finalizadosTotal = uniqueCentroIds.size;
-      }
-      setFinalizadosCount(finalizadosTotal);
-    }
-
-    fetchCentrosCount();
-  }, [regionalId]);
-
-  const getBackgroundColor = () => {
-    if (centrosCount === null || finalizadosCount === null) {
-      return 'bg-white'; // Cor padrão enquanto carrega
-    }
-    if (finalizadosCount === 0) {
-      return 'bg-red-200'; // Cor vermelha se não houver finalizados
-    }
-    if (finalizadosCount >= centrosCount) {
-      return 'bg-green-200'; // Cor verde se todos estiverem finalizados
-    }
-  
-    return 'bg-yellow-200'; // Cor padrão
-  };
-
+const Regional_Card: React.FC<CardProps> = ({
+  nome,
+  pais,
+  regionalId,
+  centrosCount = 0,
+  finalizadosCount = 0,
+  period
+}) => {
   const router = useRouter();
 
+  // Cores baseadas na contagem de finalizados vs total
+  const getBackgroundColor = useMemo(() => {
+    if (centrosCount === 0) {
+      return 'bg-gray-50';
+    }
+    if (finalizadosCount === 0) {
+      return 'bg-red-50'; // Nenhum finalizado
+    }
+    if (finalizadosCount >= centrosCount) {
+      return 'bg-green-50'; // Todos finalizados
+    }
+    return 'bg-yellow-50'; // Parcial
+  }, [centrosCount, finalizadosCount]);
+
+  const getProgressColor = useMemo(() => {
+    if (finalizadosCount === 0) return 'bg-red-400';
+    if (finalizadosCount >= centrosCount) return 'bg-green-400';
+    return 'bg-yellow-400';
+  }, [centrosCount, finalizadosCount]);
+
   const handleCardClick = () => {
-    // Navega para a rota com o ID do regional
-    router.push(`/resumo/coordenador/${regionalId}`);
+    if (!regionalId) {
+      console.warn("Regional sem ID, navegação ignorada.");
+      return;
+    }
+    router.push(`/resumo/coordenador?regionalId=${regionalId}`);
   };
 
+  const percentage = centrosCount > 0
+    ? Math.round((finalizadosCount / centrosCount) * 100)
+    : 0;
+
   return (
-    <Card 
-      className={`m-4 w-64 h-52 cursor-pointer border border-gray-300 rounded-lg shadow-lg ${getBackgroundColor()}`}
+    <Card
+      className={`w-72 min-h-[190px] cursor-pointer border border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-shadow ${getBackgroundColor}`}
       onClick={handleCardClick}
     >
-      <CardHeader>
-        <CardTitle>{nome}</CardTitle>
-        <CardDescription>{pais}</CardDescription>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold text-gray-900">{nome}</CardTitle>
+        <CardDescription className="text-sm text-gray-700">{pais}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <p>Centros: {centrosCount !== null ? centrosCount : 'Carregando...'}</p>
-        <p>Finalizados: {finalizadosCount !== null ? finalizadosCount : 'Carregando...'}</p>
+
+      <CardContent className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-2xl font-bold text-gray-900">{finalizadosCount}</span>
+          <span className="text-sm text-gray-600">de {centrosCount}</span>
+        </div>
+
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div
+            className={`h-full ${getProgressColor} transition-all duration-300`}
+            style={{ width: `${percentage}%` }}
+          ></div>
+        </div>
+
+        <div className="flex justify-between items-center text-sm text-gray-700">
+          <span className="font-semibold">{percentage}% concluído</span>
+          <span className="px-2 py-1 bg-white/70 border border-gray-200 rounded-full text-xs">
+            {finalizadosCount === 0 && "Pendente"}
+            {finalizadosCount > 0 && finalizadosCount < centrosCount && "Progresso"}
+            {finalizadosCount >= centrosCount && "Completo"}
+          </span>
+        </div>
+
+        {period?.start && period?.end && (
+          <p className="text-xs text-gray-600">{period.start} → {period.end}</p>
+        )}
+
+        <p className="text-xs text-gray-500">Clique para detalhes.</p>
       </CardContent>
-      <CardFooter>
-        <p className="text-xs">Clique para mais detalhes</p>
-      </CardFooter>
     </Card>
   );
 };

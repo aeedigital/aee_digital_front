@@ -2,7 +2,7 @@
 
 import { useUser } from "@/context/UserContext";
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 
 import { getInitialPage } from '../actions/permitions';
@@ -11,9 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {UserRole} from '../actions/permitions'
+import { apiUrl } from "@/lib/api";
+import { getPrimaryRole, normalizeRoles } from "@/lib/access-control";
 
 type Authorization = {
   role: UserRole;
+  groups: UserRole[];
   scope?: string;
 }
 
@@ -21,19 +24,30 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { setUser } = useUser();
 
   async function Auth(user: string, pass: string): Promise<Authorization>{
     
-    const users: any[] = await fetch(`/api/passes?user=${user}&pass=${pass}`).then((res) => res.json());
+    const query = new URLSearchParams({ user, pass }).toString();
+    const users: any[] = await fetch(apiUrl(`/passes?${query}`)).then((res) => res.json());
+    if (!Array.isArray(users) || users.length === 0) {
+      throw new Error("Credenciais inválidas");
+    }
    
     const userInfo = users[0];
     // const {groups: [role], scope_id: scope} = userInfo
 
-    let role = userInfo?.groups[0];
+    const groups = normalizeRoles(userInfo?.groups);
+    const role = getPrimaryRole(groups);
     let scope
+
+    if (!role) {
+      throw new Error("Usuário sem grupo de acesso reconhecido");
+    }
     
     if(userInfo?.scope_id != "*")
     {
@@ -45,16 +59,34 @@ export default function LoginPage() {
       user,
       pass,
       role,
+      groups,
       scope
     });
 
+    // Atualiza lastLogged (não bloqueia login se falhar)
+    try {
+      await fetch(apiUrl(`/passes/${userInfo._id}/last-logged-in`), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          lastLogged: new Date().toISOString(),
+        }),
+      });
+    } catch (err) {
+      console.warn("Não foi possível atualizar lastLogged", err);
+    }
+
     return {
         scope,
+        groups,
         role
     }
   }
 
   const handleLogin = async () => {
+    setErrorMessage(null);
     setIsLoading(true);
     try {
       const auth = await Auth(username, password);
@@ -66,16 +98,21 @@ export default function LoginPage() {
           Cookies.set('scope', scope);
         }
 
-        const initialPage = getInitialPage(role, scope);
-        if (!initialPage) {
-          throw new Error("Página não encontrada");
+        const redirect = searchParams.get("redirect");
+        if (redirect) {
+          router.push(redirect);
+        } else {
+          const initialPage = getInitialPage(role, scope);
+          if (!initialPage) {
+            throw new Error("Página não encontrada");
+          }
+          router.push(initialPage);
         }
-        router.push(initialPage);
       } else {
-        alert('Credenciais inválidas');
+        setErrorMessage('Usuário ou senha inválidos. Verifique e tente novamente.');
       }
     } catch (error) {
-      alert('Credenciais inválidas');
+      setErrorMessage('Não foi possível entrar. Confira usuário e senha e tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -125,6 +162,9 @@ export default function LoginPage() {
               <Button onClick={handleLogin} disabled={isLoading} className="w-full">
                 {isLoading ? 'Carregando...' : 'Login'}
               </Button>
+              {errorMessage && (
+                <p className="text-red-600 text-sm text-center w-full">{errorMessage}</p>
+              )}
               {/* <p className="text-sm text-gray-500">
                 Não tem uma conta?{' '}
                 <a href="/register" className="text-blue-500 hover:underline">

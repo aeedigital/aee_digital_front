@@ -9,6 +9,11 @@ import { BarraDeCompartilhamento } from "@/components/BarraCompartilhamento";
 import { Centro, Regional } from "@/interfaces/centro.interface";
 import { Pass } from "@/interfaces/auth.interface";
 import { set } from "date-fns";
+import { LoadingPlaceholder } from "@/components/LoadingPlaceholder";
+import { apiFetch, apiUrl } from "@/lib/api";
+import { createRandomPass } from "@/app/helpers/createRandonPass";
+import { getRandomFakeName } from "@/app/helpers/getRandomFakeName";
+import { getCredentialMessage } from "@/app/helpers/getCredentialMessage";
 
 interface LoginSenha {
   scopeInfo: Centro | Regional;
@@ -20,7 +25,7 @@ interface LoginSenha {
 
 export default function CredenciaisPage() {
   return (
-    <Suspense fallback={<p>Carregando credenciais...</p>}>
+    <Suspense fallback={<LoadingPlaceholder message="Carregando credenciais..." lines={3} />}>
       <CredenciaisContent />
     </Suspense>
   );
@@ -34,12 +39,12 @@ function CredenciaisContent() {
 
   useEffect(() => {
     async function getPasses() {
-      const passes = await fetch(`/api/passes`).then((res) => res.json());
+      const passes = await apiFetch(`/passes`).then((res) => res.json());
       return passes;
     }
 
     async function buscaCredenciaisDosCentros(scopeId: string) {
-      const centros = await fetch(`/api/regionais/${scopeId}/centros`).then((res) => res.json());
+      const centros = await apiFetch(`/regionais/${scopeId}/centros`).then((res) => res.json());
       const passes = await getPasses();
 
       const info = centros.map((centro: Centro) => {
@@ -57,7 +62,7 @@ function CredenciaisContent() {
     }
 
     async function buscaCredenciaisDasRegionais() {
-      const regionais = await fetch(`/api/regionais`).then((res) => res.json());
+      const regionais = await apiFetch(`/regionais`).then((res) => res.json());
       const passes = await getPasses();
 
       const info = regionais.map((regional: Regional) => {
@@ -91,19 +96,32 @@ function CredenciaisContent() {
     setIsResetting(scopeId);
 
     try {
-      const response = await fetch(`/api/reset-pass/${_id}?scope=${scope}&scope_id=${scopeId}`, {
-        method: "POST",
+      const nameField = scope === "centros" ? "NOME_CENTRO" : "NOME_REGIONAL";
+      const group = scope === "centros" ? "presidente" : "coord_regional";
+
+      const scopeDetails = await apiFetch(`/${scope}/${scopeId}`).then((res) => res.json());
+      const name = scopeDetails?.[nameField] || "Centro";
+
+      const newUser = getRandomFakeName(name);
+      const newPassword = createRandomPass(6);
+
+      const body = _id
+        ? { user: newUser, pass: newPassword }
+        : { user: newUser, pass: newPassword, scope_id: scopeId, groups: [group] };
+
+      const url = _id ? apiUrl(`/passes/${_id}`) : apiUrl(`/passes`);
+
+      const response = await fetch(url, {
+        method: _id ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
         throw new Error("Erro ao redefinir a senha.");
       }
-
-      const updatedPass = await response.json();
-
-      const {newPassword, newUser} = updatedPass;
-
-      console.log("UPDATED PASS", updatedPass)
 
       setContextInfo((prev) =>
         prev.map((info) =>
@@ -168,18 +186,10 @@ function CredenciaisContent() {
                     </td>
                     <td className="p-2 md:p-4 border-b border-gray-200 flex space-x-2 items-center">
                       <BarraDeCompartilhamento
-                        texto={`Olá! Seguem as credenciais para acesso:
-
-                              O site que tem que acessar é o seguinte : http://162.214.123.133:3000/
-
-                              Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
-
-                              • Login: ${info.user}
-                              • Senha: ${info.pass}
-
-                              Use-as com cuidado e não compartilhe com terceiros sem autorização.
-                              Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`
-                            }
+                        texto={getCredentialMessage({
+                          user: info.user,
+                          pass: info.pass,
+                        })}
                       />
                       <button
                         className="p-2 rounded-full border border-gray-300 hover:bg-gray-100 transition-all"

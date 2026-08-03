@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "@/lib/api";
+import {
+  buildRequiredValidationDebug,
+  getInvalidRequiredQuestions,
+} from "@/lib/requiredAnswers";
 
 export function ValidationTab({
   questions,
@@ -21,44 +26,32 @@ export function ValidationTab({
 
   useEffect(() => {
     const flattenedQuestions = questions.flatMap((q) => q.GROUP || []);
-  
-    const invalid = flattenedQuestions.filter((q) => {
-      const answers = [...(answersCache[q._id] || [])]; // Clonar array para não mutar o original
-  
-      if (answers.length === 0) return q.IS_REQUIRED; // Se não houver respostas e for obrigatória, é inválida
-  
-      // Ordenar respostas pela data (updatedAt ou _id)
-      answers.sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt) : new Date(parseInt(a._id.substring(0, 8), 16) * 1000);
-        const dateB = b.updatedAt ? new Date(b.updatedAt) : new Date(parseInt(b._id.substring(0, 8), 16) * 1000);
-        return dateB.getTime() - dateA.getTime(); // Mais recente primeiro
-      });
-  
-      // Verificar se a resposta mais recente é vazia
-      const latestAnswer = answers[0]; // Pegamos apenas a mais recente
-      return q.IS_REQUIRED && (!latestAnswer.ANSWER || latestAnswer.ANSWER.trim() === "");
-    });
-  
+
+    const invalid = getInvalidRequiredQuestions(flattenedQuestions, answersCache);
     setInvalidQuestions(invalid);
+
+    const debugEnabled =
+      typeof window !== "undefined" &&
+      (new URLSearchParams(window.location.search).get("debugValidation") === "1" ||
+        window.localStorage.getItem("debugValidation") === "1");
+
+    if (debugEnabled) {
+      const debugRows = buildRequiredValidationDebug(flattenedQuestions, answersCache);
+      console.groupCollapsed("[ValidationTab] Diagnóstico obrigatórias");
+      console.table(debugRows);
+      console.log("Pendentes:", invalid.map((q) => ({ id: q._id, pergunta: q.QUESTION })));
+      console.groupEnd();
+    }
   }, [questions, answersCache]);
 
   const handleSubmit = async () => {
     try {
-      const allAnswers = questions.flatMap((q) => q.GROUP || []).map((q) => {
-        const answers = answersCache[q._id] || [];
-        return {
-          QUESTION: q._id,
-          ANSWER: answers.length > 0 ? answers[0].ANSWER : "",
-        };
-      });
-
       const payload = {
         FORM_ID: formId,
         CENTRO_ID: centroId,
-        QUESTIONS: allAnswers,
       };
 
-      const response: Response = await fetch(`/api/summaries`, {
+      const response: Response = await fetch(apiUrl(`/summaries`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

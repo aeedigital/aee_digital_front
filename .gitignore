@@ -12,6 +12,7 @@
 # next.js
 /.next/
 /out/
+/.deploy-releases/
 
 # production
 /build
@@ -36,4 +37,5 @@ yarn-error.log*
 next-env.d.ts
 
 
-/scripts
+/scripts/*
+!/scripts/deploy.sh

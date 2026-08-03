@@ -1,0 +1,51 @@
+"use client";
+
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Cookies from "js-cookie";
+import { useUser } from "@/context/UserContext";
+import { canAccessPageByRoles } from "@/lib/access-control";
+
+const PUBLIC_PATHS = ["/login", "/about", "/logout", "/respostas", "/favicon.ico", "/_not-found"];
+
+export function AuthGuard({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { user } = useUser();
+  const [authorized, setAuthorized] = useState(false);
+
+  const isPublic = useMemo(
+    () => PUBLIC_PATHS.some((p) => pathname === p || pathname?.startsWith(`${p}/`)),
+    [pathname]
+  );
+
+  useEffect(() => {
+    if (isPublic) {
+      setAuthorized(true);
+      return;
+    }
+
+    const cookieRole = Cookies.get("userType");
+    const activeRoles = user?.groups?.length ? user.groups : user?.role || cookieRole;
+    const hasAuth = Boolean(user || cookieRole);
+
+    if (hasAuth) {
+      if (!canAccessPageByRoles(activeRoles, pathname)) {
+        router.replace("/");
+        return;
+      }
+      setAuthorized(true);
+      return;
+    }
+
+    const redirectTo = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+    router.replace(`/login?redirect=${encodeURIComponent(redirectTo)}`);
+  }, [isPublic, pathname, router, searchParams, user]);
+
+  if (!authorized) {
+    return null;
+  }
+
+  return <>{children}</>;
+}

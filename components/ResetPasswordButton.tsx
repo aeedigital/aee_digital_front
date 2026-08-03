@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User } from "@/context/UserContext";
+import { apiUrl } from "@/lib/api";
 
 interface ResetPasswordButtonProps {
-  callback?: (userData: { _id: string; user: string; pass: string; role: string; scope: string| undefined }) => void;
+  callback?: (userData: User | null) => void;
   user: User;
 }
 
-export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
+const ResetPasswordButton = forwardRef<HTMLButtonElement, ResetPasswordButtonProps>(
+  function ResetPasswordButton(props, ref) {
 
   const {user, callback} = props;
 
@@ -31,7 +33,7 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
   async function handleResetPassword() {
     setLoading(true);
     try {
-      const response = await fetch(`/api/reset-password/${user?._id}`, {
+      const response = await fetch(apiUrl(`/reset-password/${user?._id}`), {
         method: "POST"
       });
 
@@ -53,6 +55,7 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
             user: user?.user,
             pass: data.newPassword,
             role: user?.role,
+            groups: user?.groups,
             scope: user?.scope,
           });
         }
@@ -73,6 +76,7 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
   return (
     <>
       <button
+        ref={ref}
         onClick={(e) => {
           e.preventDefault(); // Evita que o DropdownMenu feche antes da API responder
           handleResetPassword();
@@ -111,4 +115,6 @@ export default function ResetPasswordButton(props: ResetPasswordButtonProps) {
       </AlertDialog>
     </>
   );
-}
+});
+
+export default ResetPasswordButton;

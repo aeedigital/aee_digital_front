@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Line, Bar } from "react-chartjs-2";
+import { apiUrl } from "@/lib/api";
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,11 +18,12 @@ import {
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import { Summary } from "@/interfaces/form.interface";
-import { Centro } from "@/interfaces/centro.interface";
 
 
 // Registra os componentes do Chart.js
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Title, Tooltip, Legend, BarElement, ChartDataLabels);
+
+const EXCLUDED_REGIONAL_IDS = ["670db855de561168547206da"];
 
 interface SummariesGraphProps {
   startDate: string; // Data no formato brasileiro "dd/mm/yyyy"
@@ -55,6 +58,90 @@ function groupEventsByDay(data: Summary[]): Record<string, number> {
   }, {});
 }
 
+function filterSummariesByPeriod(
+  summaries: Summary[],
+  dateFromISO: string,
+  dateToISO: string
+): Summary[] {
+  return summaries.filter((summary) => {
+    const eventDate = new Date(summary.createdAt);
+    if (Number.isNaN(eventDate.getTime())) return false;
+    const dateKey = eventDate.toISOString().split("T")[0];
+    return dateKey >= dateFromISO && dateKey <= dateToISO;
+  });
+}
+
+type ExcludedRegionalStats = {
+  excludedEventsByDay: Record<string, number>;
+  excludedTotalCentros: number;
+  excludedRespondedCount: number;
+};
+
+async function fetchExcludedRegionalStats(
+  dateFromISO: string,
+  dateToISO: string
+): Promise<ExcludedRegionalStats> {
+  const excludedEventsByDay: Record<string, number> = {};
+  const respondedCentros = new Set<string>();
+  let excludedTotalCentros = 0;
+
+  await Promise.all(
+    EXCLUDED_REGIONAL_IDS.map(async (regionalId) => {
+      const centrosParams = new URLSearchParams();
+      centrosParams.append("REGIONAL", regionalId);
+      centrosParams.append("STATUS", "Pendente,Integrada,Inscrita");
+
+      const [summariesResponse, centrosResponse] = await Promise.all([
+        fetch(apiUrl(`/regionais/${regionalId}/summaries`)),
+        fetch(apiUrl(`/centros?${centrosParams.toString()}`)),
+      ]);
+
+      if (!summariesResponse.ok || !centrosResponse.ok) {
+        throw new Error(`Falha ao buscar dados da regional ${regionalId}`);
+      }
+
+      const summariesData = await summariesResponse.json();
+      const centrosData = await centrosResponse.json();
+
+      const summaries = Array.isArray(summariesData)
+        ? summariesData
+        : Array.isArray(summariesData?.summaries)
+          ? summariesData.summaries
+          : [];
+      const centros = Array.isArray(centrosData)
+        ? centrosData
+        : Array.isArray(centrosData?.centros)
+          ? centrosData.centros
+          : [];
+
+      excludedTotalCentros += centros.length;
+
+      const filteredSummaries = filterSummariesByPeriod(
+        summaries as Summary[],
+        dateFromISO,
+        dateToISO
+      );
+
+      filteredSummaries.forEach((summary) => {
+        if (summary.CENTRO_ID) {
+          respondedCentros.add(summary.CENTRO_ID);
+        }
+      });
+
+      const groupedByDay = groupEventsByDay(filteredSummaries);
+      Object.entries(groupedByDay).forEach(([date, value]) => {
+        excludedEventsByDay[date] = (excludedEventsByDay[date] || 0) + value;
+      });
+    })
+  );
+
+  return {
+    excludedEventsByDay,
+    excludedTotalCentros,
+    excludedRespondedCount: respondedCentros.size,
+  };
+}
+
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -84,7 +171,7 @@ const barOptions = {
     },
   },
   scales: {
-    y: { beginAtZero: true, max: 100, ticks: { callback: function(value: number | string) { return `${value}%`; } } },
+    y: { beginAtZero: true, max: 100, ticks: { callback: function (value: number | string) { return `${value}%`; } } },
   },
 };
 
@@ -95,25 +182,76 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
   const [error, setError] = useState<string | null>(null);
 
   // Função para buscar os dados da API
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const summariesPath = `/api/summaries?fields=FORM_ID,CENTRO_ID,createdAt,updatedAt&dateFrom=${startDate}&dateTo=${endDate}`;
-      const centrosPath = `/api/centros?STATUS=Pendente,Integrada,Inscrita`;
+      console.log("Buscando dados para o gráfico com datas:", { startDate, endDate });
 
-      const [summaries, centros]: [Summary[], Centro[]] = await Promise.all([
-        fetch(summariesPath).then(res => res.json()),
-        fetch(centrosPath).then(res => res.json())
-      ]);
+      // Converter datas do formato brasileiro para ISO
+      const convertDateToISOFormat = (date: string): string => {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+          const [d, m, y] = date.split("/");
+          return `${y}-${m}-${d}`;
+        }
+        return date;
+      };
 
+      const dateFromISO = convertDateToISOFormat(startDate);
+      const dateToISO = convertDateToISOFormat(endDate);
+
+      // Usar nova rota /summaries/stats com dados agregados
+      const params = new URLSearchParams();
+      params.append("dateFrom", dateFromISO);
+      params.append("dateTo", dateToISO);
+      // Enviar status como array (múltiplos parâmetros)
+      ["Pendente", "Integrada", "Inscrita"].forEach(status => {
+        params.append("status", status);
+      });
+
+      const statsResponse = await fetch(apiUrl(`/summaries/stats?${params.toString()}`));
+      if (!statsResponse.ok) {
+        throw new Error(`Erro ao buscar estatísticas (${statsResponse.status})`);
+      }
+      const stats = await statsResponse.json();
+
+      console.log("Dados de stats recebidos:", stats);
+
+      const globalEventsByDay: Record<string, number> = stats.eventsByDay || {};
+      let adjustedEventsByDay: Record<string, number> = { ...globalEventsByDay };
+      let adjustedRespondedCount = Number(stats.respondedCount || 0);
+      let adjustedTotalCentros = Number(stats.totalCentros || 0);
+
+      try {
+        const {
+          excludedEventsByDay,
+          excludedTotalCentros,
+          excludedRespondedCount
+        } = await fetchExcludedRegionalStats(dateFromISO, dateToISO);
+
+        const allDates = new Set([
+          ...Object.keys(globalEventsByDay),
+          ...Object.keys(excludedEventsByDay),
+        ]);
+
+        adjustedEventsByDay = {};
+        allDates.forEach((date) => {
+          const globalValue = globalEventsByDay[date] || 0;
+          const excludedValue = excludedEventsByDay[date] || 0;
+          adjustedEventsByDay[date] = Math.max(0, globalValue - excludedValue);
+        });
+
+        adjustedTotalCentros = Math.max(0, adjustedTotalCentros - excludedTotalCentros);
+        adjustedRespondedCount = Math.max(0, adjustedRespondedCount - excludedRespondedCount);
+        adjustedRespondedCount = Math.min(adjustedRespondedCount, adjustedTotalCentros);
+      } catch (excludedError) {
+        console.warn(
+          "[SummariesGraphComponent] Falha ao excluir regionais configuradas; usando dados globais.",
+          excludedError
+        );
+      }
+
+      // Gerar intervalo de datas para preencher os gaps
       const allDates = generateDateRange(startDate, endDate);
-      const summariesGroupedData = groupEventsByDay(summaries);
-
-      const totalUniqueSummariesByCentro = summaries.reduce((acc: Record<string, number>, summary: Summary) => {
-        acc[summary.CENTRO_ID] = (acc[summary.CENTRO_ID] || 0) + 1;
-        return acc;
-      }, {});
-
-      const filledData = allDates.map((date) => summariesGroupedData[date] || 0);
+      const filledData = allDates.map((date) => adjustedEventsByDay[date] || 0);
 
       setChartData({
         labels: allDates,
@@ -130,12 +268,17 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
         ],
       });
 
-      const pendente = 100 - (Object.keys(totalUniqueSummariesByCentro).length / centros.length * 100);
+      const pendenteRaw =
+        adjustedTotalCentros > 0
+          ? 100 - (adjustedRespondedCount / adjustedTotalCentros) * 100
+          : 0;
+      const pendente = Math.min(100, Math.max(0, pendenteRaw));
 
       setChartDataBar({
         labels: ["Faltando", "Respondido"],
         datasets: [
           {
+            label: "Centros",
             data: [pendente, 100 - pendente],
             backgroundColor: ["rgba(255, 99, 132, 0.5)", "rgba(75, 192, 192, 0.5)"],
             borderColor: ["rgba(255, 99, 132, 1)", "rgba(75, 192, 192, 1)"],
@@ -150,11 +293,11 @@ const SummariesGraphComponent: React.FC<SummariesGraphProps> = ({ startDate, end
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, [fetchData]);
 
   if (loading) return <p>Carregando...</p>;
   if (error) return <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>;

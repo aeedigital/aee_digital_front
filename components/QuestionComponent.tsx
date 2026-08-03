@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import FormInput from '@/components/FormInput';
 import { Answer } from '@/interfaces/form.interface';
+import { apiUrl } from '@/lib/api';
 
 interface QuestionProps {
   question: any;
@@ -8,10 +9,11 @@ interface QuestionProps {
   questionIndex: number | string;
   answer: Answer;
   placeholder?: string;
+  answerMetadata?: Pick<Answer, 'FORM_ID' | 'GROUP_KEY' | 'GROUP_INSTANCE_ID' | 'GROUP_OCCURRENCE_ORDER' | 'QUESTION_ORDER'>;
   onAnswerChange?: (questionId: string, answerId: string | null, newAnswer: Answer) => void;
 }
 
-export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange, placeholder }: QuestionProps) {
+export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange, placeholder, answerMetadata }: QuestionProps) {
   const [questionValue, setQuestionValue] = useState<Answer>(answer);
   const [isEmpty, setIsEmpty] = useState<boolean>(false);
 
@@ -28,7 +30,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
 
       if (questionValue._id) {
         response = await fetch(
-          `/api/answers/${questionValue._id}`,
+          apiUrl(`/answers/${questionValue._id}`),
           {
             method: 'PATCH',
             headers: {
@@ -36,12 +38,13 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
             },
             body: JSON.stringify({
               ANSWER: String(value),
+              ...answerMetadata,
             }),
           }
         ).then((res: any) => res.json());
       } else {
         response = await fetch(
-          `/api/answers`,
+          apiUrl(`/answers`),
           {
             method: 'POST',
             headers: {
@@ -51,15 +54,16 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
               ANSWER: String(value),
               CENTRO_ID: centroId,
               QUESTION_ID: questionId,
+              ...answerMetadata,
             }),
           }
         ).then((res: any) => res.json());
       }
 
-      setQuestionValue((prevValue) => {
-        prevValue.ANSWER = value;
-        return prevValue;
-      });
+      setQuestionValue((prevValue) => ({
+        ...prevValue,
+        ANSWER: String(value),
+      }));
 
       setIsEmpty(IS_REQUIRED && (!value || (typeof value === 'string' && value.trim() === '')));
 
@@ -68,6 +72,20 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
           ...response,
           ANSWER: String(value),
         };
+
+        const debugEnabled =
+          typeof window !== "undefined" &&
+          (new URLSearchParams(window.location.search).get("debugValidation") === "1" ||
+            window.localStorage.getItem("debugValidation") === "1");
+
+        if (debugEnabled) {
+          console.groupCollapsed(`[QuestionComponent] onInputChange question=${question._id}`);
+          console.log("questionValue atual:", questionValue);
+          console.log("response backend:", response);
+          console.log("updatedAnswer enviado ao cache:", updatedAnswer);
+          console.groupEnd();
+        }
+
         onAnswerChange(question._id, response._id, updatedAnswer);
       }
     } catch (error) {

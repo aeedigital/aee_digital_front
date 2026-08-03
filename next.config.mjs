@@ -1,20 +1,15 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  output: "export",
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  // A Lambda de producao tem concorrencia reservada baixa. Limitar os workers
+  // evita que a exportacao estatica derrube as proprias leituras publicas.
+  experimental: {
+    cpus: 1,
+  },
+};
 
 export default nextConfig;
-
-// import dotenv from 'dotenv';
-
-// // Carregar o arquivo correto baseado no ambiente
-// const envFile = process.env.NODE_ENV === 'production' ? '.env.docker' : '.env.local';
-// dotenv.config({ path: envFile });
-
-// /** @type {import('next').NextConfig} */
-// const nextConfig = {
-//   reactStrictMode: true,
-//   env: {
-//     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL, // Expondo variáveis ao cliente
-//   },
-// };
-
-// export default nextConfig;

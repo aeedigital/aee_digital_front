@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import Regional_Card from "@/components/Regional_Card";
-import { Period } from "@/helpers/datePeriodHelper";
+import { Period } from "@/app/helpers/datePeriodHelper";
 import { Regional } from "@/interfaces/centro.interface";
-import { getCadastroInfo } from "@/app/actions/cadastroInfo";
+import { getCadastroInfo, type CadastroInfo } from "@/app/actions/cadastroInfo";
 import SummariesGraphComponent from "@/components/SummariesGraphComponent";
+import { apiFetch } from "@/lib/api";
+import CadastroPeriodDialog from "@/components/CadastroPeriodDialog";
+import ExportAllianceSummariesButton from "@/components/ExportAllianceSummariesButton";
+import { useUser } from "@/context/UserContext";
+import { canAccessAbility } from "@/lib/access-control";
 
 function SkeletonCard() {
   return (
@@ -22,57 +28,211 @@ function SkeletonCard() {
 }
 
 function RegionalList() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [regionais, setRegionais] = useState<Regional[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period | undefined>();
+  const [cadastroInfo, setCadastroInfo] = useState<CadastroInfo | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  const noRegionais = !loading && !error && regionais.length === 0;
+  const canManageCadastroPeriod = canAccessAbility(
+    user?.groups?.length ? user.groups : user?.role,
+    "manageCadastroPeriod"
+  );
 
   useEffect(() => {
     async function fetchRegionais() {
+      setLoading(true);
+      setError(null);
+
       try {
         const cadastroInfo = await getCadastroInfo();
+        setCadastroInfo(cadastroInfo);
         setPeriod({ start: cadastroInfo.start, end: cadastroInfo.end });
 
-        const apiPath = `/api/regionais`;
-        const response = await fetch(apiPath);
-        if (!response.ok) throw new Error("Falha ao buscar regionais");
+        // Formatar datas para ISO (yyyy-mm-dd)
+        const formatToISO = (dateStr?: string) => {
+          if (!dateStr) return undefined;
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+            const [d, m, y] = dateStr.split("/");
+            return `${y}-${m}-${d}`;
+          }
+          return dateStr;
+        };
+
+        const dateFrom = formatToISO(cadastroInfo.start);
+        const dateTo = formatToISO(cadastroInfo.end);
+
+        // Usar nova rota /regionais/overview com agregação pronta
+        let overviewUrl = `/regionais/overview`;
+        const params = new URLSearchParams();
+        if (dateFrom) params.append("dateFrom", dateFrom);
+        if (dateTo) params.append("dateTo", dateTo);
+        if (params.toString()) {
+          overviewUrl += `?${params.toString()}`;
+        }
+
+        const response = await apiFetch(overviewUrl, { cache: "no-store" });
+
+        if (!response.ok) {
+          const message = `Falha ao buscar regionais (${response.status})`;
+          throw new Error(message);
+        }
 
         const regionaisData: Regional[] = await response.json();
 
+        console.log("Regionais overview fetched:", regionaisData);
+
         setRegionais(
-          regionaisData.sort((a, b) => 
-            a.NOME_REGIONAL.localeCompare(b.NOME_REGIONAL)
+          regionaisData.sort((a, b) =>
+            (a.NOME_REGIONAL || "").localeCompare(b.NOME_REGIONAL || "")
           )
         );
       } catch (err: any) {
-        setError(err.message);
+        const friendlyMessage = err?.message || "Erro desconhecido";
+        const baseUrlInfo = apiBase ? ` na API ${apiBase}` : " (NEXT_PUBLIC_API_URL não definida)";
+        setError(`Não foi possível carregar regionais${baseUrlInfo}. Detalhes: ${friendlyMessage}`);
       } finally {
         setLoading(false);
       }
     }
 
     fetchRegionais();
-  }, []);
+  }, [apiBase, reloadKey]);
 
   if (error) {
     return <div style={{ color: "red", fontWeight: "bold" }}>Erro ao carregar regionais: {error}</div>;
   }
 
+  const parseDate = (value?: string) => {
+    if (!value) return null;
+    // suporta ISO ou formato dd/MM/yyyy usado em getCadastroInfo
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      const [d, m, y] = value.split("/").map(Number);
+      return new Date(Date.UTC(y, m - 1, d));
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const formatDate = (value?: string) => {
+    const date = parseDate(value);
+    if (!date) return null;
+    return date.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  };
+
+  const formattedPeriod =
+    period && (period.start || period.end)
+      ? `${formatDate(period.start) || "início não definido"} até ${formatDate(period.end) || "sem data de término"
+      }`
+      : null;
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-      {period && <SummariesGraphComponent startDate={period.start} endDate={period.end} />}
-      
-      {loading
-        ? Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)
-        : regionais.map((regional) => (
-            <Regional_Card
-              key={regional._id}
-              nome={regional.NOME_REGIONAL}
-              pais={regional.PAIS}
-              regionalId={regional._id}
-              period={period}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {formattedPeriod && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: "8px",
+            background: "#f0f4ff",
+            color: "#1f2a44",
+            fontWeight: 600,
+            border: "1px solid #d6e0ff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <span>Período de avaliação: {formattedPeriod}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <ExportAllianceSummariesButton
+              cadastroInfo={cadastroInfo}
+              disabled={loading || noRegionais}
+              regionais={regionais}
             />
-          ))}
+            <Link
+              href="/resumo/alianca/composicao"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "8px 14px",
+                borderRadius: "999px",
+                border: "1px solid #cbd5e1",
+                background: "#ffffff",
+                color: "#0f172a",
+                fontSize: "14px",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Ver composição das regionais
+            </Link>
+            {canManageCadastroPeriod && cadastroInfo && (
+              <CadastroPeriodDialog
+                cadastroInfo={cadastroInfo}
+                onSaved={(nextValue) => {
+                  setCadastroInfo(nextValue);
+                  setPeriod({ start: nextValue.start, end: nextValue.end });
+                  setReloadKey((current) => current + 1);
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", width: "100%" }}>
+        {period && <SummariesGraphComponent startDate={period.start} endDate={period.end} />}
+
+        {loading && Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)}
+
+        {noRegionais && <div style={{ color: "#444", fontWeight: "bold" }}>Nenhuma regional retornada pela API.</div>}
+
+        {!loading &&
+          !noRegionais &&
+          regionais.map((regional, index) => {
+            const regionalId =
+              (regional as any)?._id ||
+              (regional as any)?.id ||
+              (regional as any)?.regionalId ||
+              (regional as any)?.ID ||
+              null;
+
+            const nomeRegional =
+              regional.NOME_REGIONAL ||
+              (regional as any)?.nomeRegional ||
+              (regional as any)?.nome ||
+              (regional as any)?.name ||
+              "Sem nome";
+
+            if (!regionalId) {
+              console.warn("[Resumo/Aliança] Regional sem ID", regional);
+            }
+
+            console.log("[Regional_Card] Props:", {
+              regionalData: regional,
+              nome: nomeRegional,
+              centrosCount: (regional as any)?.centrosCount,
+              finalizadosCount: (regional as any)?.finalizadosCount
+            });
+
+            return (
+              <Regional_Card
+                key={regionalId || nomeRegional || index}
+                nome={nomeRegional}
+                pais={regional.PAIS || ""}
+                regionalId={regionalId || ""}
+                centrosCount={(regional as any)?.centrosCount || 0}
+                finalizadosCount={(regional as any)?.finalizadosCount || 0}
+                period={period}
+              />
+            );
+          })}
+      </div>
     </div>
   );
 }

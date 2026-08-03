@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { AiOutlineHistory } from "react-icons/ai";
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FiAlertTriangle, FiCheckCircle } from "react-icons/fi";
 
 import { Quiz, Question, Answer, Summary, QuestionAnswer } from '@/interfaces/form.interface';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,11 @@ import {
 
 import FormInput from './FormInput';
 import { QuestionComponent } from './QuestionComponent';
-import {AcoesCoordenadorCentro} from '@components/AcoesCoordenadorCentro';
+import { AcoesCoordenadorCentro } from '@components/AcoesCoordenadorCentro';
+import { apiUrl } from '@/lib/api';
+import { isRequiredAnswerFilled, pickCurrentAnswer } from '@/lib/requiredAnswers';
+import { normalizeSummaries, pickLatestSummary } from '@/lib/summaries';
+import { getCoordinatorQuestionsFromAnswers } from '@/lib/coordinatorQuestions';
 
 interface CardProps {
   centro: Centro;
@@ -24,6 +28,7 @@ interface CardProps {
   required_questions?: string[];
   form: any;
   summaries: Summary[];
+  answers?: Answer[];
 }
 
 const House_Card: React.FC<CardProps> = ({
@@ -32,7 +37,21 @@ const House_Card: React.FC<CardProps> = ({
   coordenador_questions,
   form,
   summaries,
+  answers,
 }) => {
+
+  // cache por centro para evitar múltiplas chamadas /answers
+  const answersCache = useMemo(() => {
+    if (typeof window === "undefined") return new Map<string, Promise<Answer[]>>();
+    const key = "__answersCache__";
+    // @ts-ignore
+    if (!window[key]) {
+      // @ts-ignore
+      window[key] = new Map<string, Promise<Answer[]>>();
+    }
+    // @ts-ignore
+    return window[key] as Map<string, Promise<Answer[]>>;
+  }, []);
 
   const router = useRouter();
 
@@ -43,24 +62,59 @@ const House_Card: React.FC<CardProps> = ({
   const [backgroundColor, setBackgroundColor] = useState<string>('bg-white');
   const [notMetCriterias, setNotMetCriterias] = useState<string[]>([]);
   const [finalizou, setFinalizou] = useState<boolean>(false);
+  const normalizedSummaries = useMemo(() => normalizeSummaries(summaries), [summaries]);
+  const requiredQuestions = useMemo(() => {
+    if (!form) return [];
+    const req: Question[] = [];
+    form.PAGES?.forEach((quiz: { QUIZES: Quiz[] }) => {
+      quiz.QUIZES?.forEach((group) => {
+        group.QUESTIONS?.forEach((questionGroup) => {
+          questionGroup.GROUP?.forEach((q: Question) => {
+            if (q.IS_REQUIRED) {
+              req.push(q);
+            }
+          });
+        });
+      });
+    });
+    return req;
+  }, [form]);
 
-  // 1. Busca todas as respostas do centro
+  // 1. Respostas: prioriza prop "answers"; senão, busca com cache por centro
   useEffect(() => {
     async function fetchAllAnswers() {
       try {
-        let path = `/api/answers?CENTRO_ID=${centro._id}`;
-        const res = await fetch(path);
-        const data = await res.json();
-        setAllAnswers(data);
+        const key = centro._id;
+        const path = apiUrl(`/answers?CENTRO_ID=${centro._id}`);
+
+        if (!answersCache.has(key)) {
+          const promise = fetch(path).then((res) => res.json());
+          answersCache.set(key, promise);
+        }
+
+        const data = await answersCache.get(key);
+        setAllAnswers(data || []);
       } catch (error) {
         console.error('Erro ao buscar as respostas', error);
       }
     }
 
+    if (answers) {
+      setAllAnswers(answers);
+      answersCache.set(centro._id, Promise.resolve(answers));
+      return;
+    }
+
     if (centro?._id) {
       fetchAllAnswers();
     }
-  }, [centro?._id]);
+  }, [centro?._id, answers, answersCache]);
+
+  // Mantém cache sincronizado após edições locais
+  useEffect(() => {
+    if (!centro?._id) return;
+    answersCache.set(centro._id, Promise.resolve(allAnswers));
+  }, [allAnswers, centro?._id, answersCache]);
 
   // 2. Assim que tivermos todas as respostas, define situacao e preenche questões do coordenador
   useEffect(() => {
@@ -72,47 +126,46 @@ const House_Card: React.FC<CardProps> = ({
     setSituacao(answerAvaliacao?.ANSWER || '');
 
     // B) Preenche questoesCoordenador
-    const coordenadorQAs = coordenador_questions.map((question) => {
-      const answer = allAnswers.find((ans) => ans.QUESTION_ID === question._id);
-      return { question, answer };
-    });
+    const coordenadorQAs = getCoordinatorQuestionsFromAnswers(form, allAnswers);
 
-    setQuestoesCoordenador(coordenadorQAs);
-  }, [allAnswers, avaliacao_question, coordenador_questions]);
+    setQuestoesCoordenador(
+      coordenadorQAs.length
+        ? coordenadorQAs
+        : coordenador_questions.map((question) => ({
+            question,
+            answer: allAnswers.find((ans) => ans.QUESTION_ID === question._id),
+          }))
+    );
+  }, [allAnswers, avaliacao_question, coordenador_questions, form]);
 
   // 3. Verifica quais perguntas obrigatórias não foram respondidas
   useEffect(() => {
-    if (!allAnswers || allAnswers.length === 0) return;
-    if (!form) return;
+    if (!requiredQuestions.length) return;
 
-    const requiredQuestions: Question[] = [];
-    form.PAGES.forEach((quiz: { QUIZES: Quiz[] }) => {
-      quiz.QUIZES.forEach((group) => {
-        group.QUESTIONS.forEach((questionGroup) => {
-          questionGroup.GROUP.forEach((q) => {
-            if (q.IS_REQUIRED) {
-              requiredQuestions.push(q);
-            }
-          });
-        });
-      });
-    });
+    const answersByQuestionId = allAnswers.reduce<Record<string, Answer[]>>((acc, answer) => {
+      if (!answer.QUESTION_ID) return acc;
+      if (!acc[answer.QUESTION_ID]) {
+        acc[answer.QUESTION_ID] = [];
+      }
+      acc[answer.QUESTION_ID].push(answer);
+      return acc;
+    }, {});
 
     const notAnswered = requiredQuestions.filter((rq) => {
-      const resp = allAnswers.filter((a) => a.QUESTION_ID === rq._id).pop();
-      return !resp || !resp.ANSWER?.trim();
+      const currentAnswer = pickCurrentAnswer(answersByQuestionId[rq._id] || []);
+      return !isRequiredAnswerFilled(currentAnswer);
     });
 
     setPerguntasFaltantes(notAnswered.map((q) => q.QUESTION));
-  }, [allAnswers, form]);
+  }, [allAnswers, requiredQuestions]);
 
   // Define a cor do Card com base no percentual de questões do coordenador
-  const getBackgroundColor = () => {
+  const getBackgroundColor = useCallback(() => {
     if (!questoesCoordenador || questoesCoordenador.length === 0) {
       return 'bg-white';
     }
-    
-    if(finalizou){
+
+    if (finalizou) {
       setNotMetCriterias([]);
       return 'bg-green-200';
     }
@@ -128,31 +181,30 @@ const House_Card: React.FC<CardProps> = ({
 
     const percentage = (answered / questions) * 100;
 
-    const criteria:any[] = []
+    const criteria: any[] = []
 
     const finalizouCriteria = {
       name: "Presidente finalizar a avaliação",
-      method : () => {
-        return summaries && summaries.length > 0;
+      method: () => {
+        return normalizedSummaries.length > 0;
       }
     }
 
     const coordResponseCriteria = {
       name: "Coordenador responder as perguntas",
-      method : () => {
+      method: () => {
         return percentage === 100;
       }
     }
 
     const analysisCriteria = {
       name: "Coordenador finalizar análise",
-      method : () => {
-        console.log("FINALIZOU", centro.NOME_CURTO, summaries)
-        if(!summaries || summaries.length === 0){
+      method: () => {
+        if (normalizedSummaries.length === 0) {
           return false;
         }
-        const lastSummary = summaries[0];
-        return "validatedByCoordAt" in lastSummary;;
+        const lastSummary = pickLatestSummary(normalizedSummaries);
+        return Boolean(lastSummary?.validatedByCoordAt);
       }
     }
 
@@ -165,37 +217,49 @@ const House_Card: React.FC<CardProps> = ({
     let notMetCriterias = [];
 
     for (let i = 0; i < criteria.length; i++) {
-      if(criteria[i].method()){
+      if (criteria[i].method()) {
         criteriasMet.push(criteria[i].name)
-      }else{
+      } else {
         notMetCriterias.push(criteria[i].name)
       }
     }
 
     setNotMetCriterias(notMetCriterias)
 
-    console.log("CRITERIAS MET", centro.NOME_CURTO, criteriasMet)
+    const debugResumo =
+      typeof window !== "undefined" &&
+      (new URLSearchParams(window.location.search).get("debugResumo") === "1" ||
+        window.localStorage.getItem("debugResumo") === "1");
 
-    if(criteriasMet.length === criteria.length){
+    if (debugResumo && notMetCriterias.includes("Presidente finalizar a avaliação") && normalizedSummaries.length === 0) {
+      console.warn("[House_Card][debugResumo] Pendência do presidente sem summaries normalizados", {
+        centroId: centro._id,
+        centro: centro.NOME_CURTO || centro.NOME_CENTRO,
+        summariesRecebidos: summaries,
+        summariesNormalizadosCount: normalizedSummaries.length,
+      });
+    }
+
+    if (criteriasMet.length === criteria.length) {
       return 'bg-green-200';
-    }else if(criteriasMet.length > 0){
+    } else if (criteriasMet.length > 0) {
       return 'bg-yellow-200';
-    }else{
+    } else {
       return 'bg-red-200';
     }
- 
-  };
+
+  }, [questoesCoordenador, normalizedSummaries, finalizou, centro.NOME_CURTO, centro._id, centro.NOME_CENTRO, summaries]);
 
   useEffect(() => {
     setBackgroundColor(getBackgroundColor());
-  }, [questoesCoordenador, summaries, finalizou]);
+  }, [getBackgroundColor]);
 
   const handleCardClick = () => {
-    router.push(`/cadastro/${centro._id}`);
+    router.push(`/cadastro?centroId=${centro._id}`);
   };
 
   const handleHistoryClick = () => {
-    router.push(`/cadastro/historico/${centro._id}`);
+    router.push(`/cadastro/historico?centroId=${centro._id}`);
   };
 
   const handleAnswerChange = (
@@ -203,32 +267,32 @@ const House_Card: React.FC<CardProps> = ({
     answerId: string | null,
     newAnswer: Answer
   ) => {
-      setQuestoesCoordenador((prev) => {
-        const existingAnswers = prev.find((qa) => qa.question._id === questionId && qa.answer?._id === answerId);
+    setQuestoesCoordenador((prev) => {
+      const existingAnswers = prev.find((qa) => qa.question._id === questionId && qa.answer?._id === answerId);
 
-        if (existingAnswers) {
-          return prev.map((qa) => {
-            if (qa.answer?._id === answerId) {
-              return { ...qa, answer: newAnswer };
-            }
-            return qa;
-          })
-        }
-        else{
-
-          const questionToChange = prev.find((qa) => qa.question._id === questionId);
-          if (!questionToChange) {
-            console.warn('Questão não encontrada');
-            return prev;
-          }else{
-            questionToChange.answer = newAnswer;
+      if (existingAnswers) {
+        return prev.map((qa) => {
+          if (qa.answer?._id === answerId) {
+            return { ...qa, answer: newAnswer };
           }
-        }
-        return prev;
-        
+          return qa;
+        })
       }
-      );
-   
+      else {
+
+        const questionToChange = prev.find((qa) => qa.question._id === questionId);
+        if (!questionToChange) {
+          console.warn('Questão não encontrada');
+          return prev;
+        } else {
+          questionToChange.answer = newAnswer;
+        }
+      }
+      return prev;
+
+    }
+    );
+
   };
 
   const onInputChange = () => {
@@ -236,19 +300,14 @@ const House_Card: React.FC<CardProps> = ({
   };
 
   return (
-    <Card
-      className={`m-4 w-64 border border-gray-300 rounded-lg shadow-lg p-4 ${backgroundColor}`}
-    >
-      <CardHeader>
-        <CardTitle>{centro.NOME_CENTRO}</CardTitle>
-        <CardDescription>
-          {centro.NOME_CURTO} {centro.data_avaliacao}
-        </CardDescription>
+    <Card className={`m-2 w-72 border border-gray-300 rounded-lg shadow-md p-4 ${backgroundColor}`}>
+      <CardHeader className="p-0 mb-3">
+        <CardTitle className="text-base font-semibold leading-snug">{centro.NOME_CENTRO}</CardTitle>
+        <CardDescription className="text-sm text-gray-700">{centro.NOME_CURTO || "—"}</CardDescription>
       </CardHeader>
 
-      <CardContent>
-        {/* Aqui, envolvemos o input em um contêiner com fundo branco para não "herdar" a cor do Card */}
-        <div className=" p-2 rounded">
+      <CardContent className="p-0 space-y-3">
+        <div>
           <p className="font-semibold mb-1">Avaliação:</p>
           <FormInput
             type="text"
@@ -260,63 +319,71 @@ const House_Card: React.FC<CardProps> = ({
           />
         </div>
 
-        {/* Fazemos o mesmo para as questões do coordenador */}
-        {questoesCoordenador.map((questionAnswered, index) => (
-          <div key={index} className=" p-2 mt-2 rounded">
-            <QuestionComponent
-              centroId={centro._id}
-              answer={
-                questionAnswered.answer || {
-                  _id: '',
-                  QUESTION_ID: '',
-                  ANSWER: '',
-                  CENTRO_ID: '',
-                  QUIZ_ID: ''
-                }
-              }
-              placeholder="Não respondido"
-              question={questionAnswered.question}
-              questionIndex={index}
-              onAnswerChange={handleAnswerChange}
-            />
-          </div>
-        ))}
+        <div>
+          <p className="font-semibold mb-1">Perguntas do coordenador</p>
+          {questoesCoordenador.length === 0 ? (
+            <p className="text-sm text-gray-700">Nenhuma pergunta configurada.</p>
+          ) : (
+            questoesCoordenador.map((questionAnswered, index) => (
+              <div key={`${questionAnswered.question?._id || index}-${index}`} className="mt-2">
+                <QuestionComponent
+                  centroId={centro._id}
+                  answer={
+                    questionAnswered.answer || {
+                      _id: '',
+                      QUESTION_ID: '',
+                      ANSWER: '',
+                      CENTRO_ID: '',
+                      QUIZ_ID: ''
+                    }
+                  }
+                  placeholder="Não respondido"
+                  question={questionAnswered.question}
+                  questionIndex={index}
+                  onAnswerChange={handleAnswerChange}
+                />
+              </div>
+            ))
+          )}
+        </div>
 
         <p className="mt-2 text-sm">Perguntas Faltantes: {perguntasFaltantes.length}</p>
+
+        <div className="mt-2 p-3 bg-white/70 rounded-lg shadow-inner border border-gray-200">
+          <h3 className="text-base font-semibold mb-2 text-gray-800">Pendências</h3>
+          {notMetCriterias.length === 0 ? (
+            <div className="flex items-center text-green-600 font-medium">
+              <FiCheckCircle className="mr-2" />
+              Sem pendências! Tudo está completo.
+            </div>
+          ) : (
+            <ul className="list-none space-y-2">
+              {notMetCriterias.map((criteria, index) => (
+                <li key={index} className="flex items-center bg-red-100 p-2 rounded-md shadow-sm text-red-700">
+                  <FiAlertTriangle className="mr-2" />
+                  <span className="font-medium">{criteria}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </CardContent>
 
-      {/* Nova seção de pendências com estilo aprimorado */}
-<div className="mt-4 p-3 bg-gray-100 rounded-lg shadow-inner">
-  <h3 className="text-lg font-semibold mb-2 text-gray-700">Pendências</h3>
-
-  {notMetCriterias.length === 0 ? (
-    <div className="flex items-center text-green-600">
-      ✅ <span className="ml-2">Sem pendências! Tudo está completo.</span>
-    </div>
-  ) : (
-    <ul className="list-none space-y-2">
-      {notMetCriterias.map((criteria, index) => (
-        <li key={index} className="flex items-center bg-red-100 p-2 rounded-md shadow-sm">
-          <span className="text-red-500 text-lg mr-2">⚠️</span>
-          <span className="text-red-700 font-medium">{criteria}</span>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
-
-      <AcoesCoordenadorCentro
-        centroId={centro._id}
-        coordQuestionsAnswered={questoesCoordenador}
-        onVerRespostas={handleCardClick}
-        onVerHistorico={handleHistoryClick}
-        onFinalizarAnalise={(status:boolean) => {
-          console.log("FINALIZOU", centro.NOME_CURTO, status)
-          setFinalizou(status)}
-        }
-        hasSummary={summaries && summaries.length > 0}
-      />
- 
+      <div className="mt-3">
+        <AcoesCoordenadorCentro
+          centroId={centro._id}
+          centro={centro}
+          coordQuestionsAnswered={questoesCoordenador}
+          onVerRespostas={handleCardClick}
+          onVerHistorico={handleHistoryClick}
+          onFinalizarAnalise={(status: boolean) => {
+            setFinalizou(status)
+          }
+          }
+          hasSummary={normalizedSummaries.length > 0}
+          summaries={normalizedSummaries}
+        />
+      </div>
     </Card>
   );
 };

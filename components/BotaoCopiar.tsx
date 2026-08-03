@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import React from "react";
+import { getCredentialMessage } from "@/app/helpers/getCredentialMessage";
 
 interface BotaoCopiarProps {
   user: string;
@@ -10,17 +11,7 @@ interface BotaoCopiarProps {
 
 export function BotaoCopiar({ user, pass }: BotaoCopiarProps) {
   const handleCopy = async () => {
-    const textToCopy = `Olá! Seguem as credenciais para acesso:
-
-    O site que tem que acessar é o seguinte: http://162.214.123.133:3000/
-
-    Estamos trabalhando para melhorar a segurança e a experiência de uso, mas por enquanto, use as credenciais abaixo:
-
-    • Login: ${user}
-    • Senha: ${pass}
-
-    Use-as com cuidado e não compartilhe com terceiros sem autorização.
-    Qualquer dúvida, estamos aqui para te ajudar. Obrigado!`;
+    const textToCopy = getCredentialMessage({ user, pass });
 
     try {
       await navigator.clipboard.writeText(textToCopy);
