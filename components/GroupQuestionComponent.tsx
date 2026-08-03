@@ -19,6 +19,8 @@ interface QuestionProps {
   centroId: string;
   initialCache: Record<string,Answer[]>;
   onAnswerChange: (questionId:string, answerId: string | null, newAnswer: Answer | null) => void; // Função para atualizar respostas
+  formId: string;
+  groupKey: string;
 }
 
 interface QuestionAnswer {
@@ -27,11 +29,13 @@ interface QuestionAnswer {
 }
 
 interface QuestionAnswerGroup {
-  groupKey: string;
+  renderKey: string;
+  groupInstanceId: string;
+  occurrenceOrder: number;
   questionsAnswered: QuestionAnswer[];
 }
 
-export function GroupQuestionComponent({ questionGroup, centroId, initialCache, onAnswerChange }: QuestionProps) {
+export function GroupQuestionComponent({ questionGroup, centroId, initialCache, onAnswerChange, formId, groupKey }: QuestionProps) {
   const { toast } = useToast();
   const [answerGroups, setAnswerGroups] = useState<QuestionAnswerGroup[]>([]);
   const initializedRef = useRef(false);
@@ -42,7 +46,7 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     return `group-${groupCounterRef.current}`;
   }, []);
 
-  const buildGroupKey = useCallback(
+  const buildRenderKey = useCallback(
     (questionsAnswered: QuestionAnswer[]) => {
       const answerIds = questionsAnswered
         .map(({ answer }) => answer?._id)
@@ -78,29 +82,15 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
     return answerRemoved;
   }
 
-  const createAnswer = useCallback(async (questionId: string, value: string): Promise<any>=>{
-    const answerCreated = await fetch(apiUrl(`/answers`), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ANSWER: String(value),
-        CENTRO_ID: centroId,
-        QUESTION_ID: questionId
-      }),
-    }).then((res:any) => res.json());
-
-    onAnswerChange(questionId, null, answerCreated)
-
-    return answerCreated;
-  }, [centroId, onAnswerChange]);
-
-  const initializeEmptyGroups = useCallback((shouldCreateQuestions:boolean) => {
+  const initializeEmptyGroups = useCallback(() => {
     const emptyGroups: QuestionAnswerGroup[] = [];
     // Create a single empty group initially
     const emptyGroup: QuestionAnswerGroup = {
-      groupKey: createLocalGroupKey(),
+      renderKey: createLocalGroupKey(),
+      groupInstanceId: questionGroup.IS_MULTIPLE && typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${groupKey}/occurrence:0`,
+      occurrenceOrder: 0,
       questionsAnswered: questionGroup.GROUP.map((question) => {
 
         const questionAnswered = {
@@ -113,21 +103,18 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
             _id:""
           }
         }
-        if(shouldCreateQuestions){
-          void createAnswer(question._id, " ")
-        }
-
         return questionAnswered;
       }),
     };
     emptyGroups.push(emptyGroup);
 
     return emptyGroups;
-  }, [questionGroup.GROUP, centroId, createAnswer, createLocalGroupKey]);
+  }, [questionGroup.GROUP, questionGroup.IS_MULTIPLE, centroId, createLocalGroupKey, groupKey]);
 
 
   const handleAddGroup = () => {
-    const newEmptyGroup = initializeEmptyGroups(true)[0]; // Create one empty group
+    const newEmptyGroup = initializeEmptyGroups()[0];
+    newEmptyGroup.occurrenceOrder = answerGroups.length;
     setAnswerGroups((prevGroups) => [...prevGroups, newEmptyGroup]);
   };
 
@@ -163,7 +150,9 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
         }));
 
         return {
-          groupKey: buildGroupKey(questionsAnswered),
+          renderKey: buildRenderKey(questionsAnswered),
+          groupInstanceId: occurrence.groupInstanceId,
+          occurrenceOrder: occurrence.occurrenceIndex,
           questionsAnswered,
         };
       });
@@ -173,16 +162,16 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
 
     // Initialize empty groups only once to avoid flicker on updates
     if (!initializedRef.current) {
-      setAnswerGroups(initializeEmptyGroups(false));
+      setAnswerGroups(initializeEmptyGroups());
       initializedRef.current = true;
     }
     projectAnswers();
-  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, buildGroupKey]);
+  }, [questionGroup, centroId, initialCache, initializeEmptyGroups, buildRenderKey]);
 
   return (
     <div className="space-y-6">
       {answerGroups.map((group, groupIndex) => (
-        <div key={group.groupKey} className="relative space-y-4 border p-4 rounded-md shadow-sm">
+        <div key={group.renderKey} className="relative space-y-4 border p-4 rounded-md shadow-sm">
           <div className="flex flex-wrap gap-4">
             {group.questionsAnswered.map((questionAnswered, questionIndex) => (
               <QuestionComponent
@@ -192,6 +181,13 @@ export function GroupQuestionComponent({ questionGroup, centroId, initialCache, 
                 question={questionAnswered.question}
                 questionIndex={questionIndex}
                 onAnswerChange={onAnswerChange}
+                answerMetadata={{
+                  FORM_ID: formId,
+                  GROUP_KEY: groupKey,
+                  GROUP_INSTANCE_ID: group.groupInstanceId,
+                  GROUP_OCCURRENCE_ORDER: group.occurrenceOrder,
+                  QUESTION_ORDER: questionIndex,
+                }}
               />
             ))}
           </div>

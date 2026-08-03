@@ -27,5 +27,14 @@ const envRules: PublicDataHideRule[] = ENV_EXTRA
   : [];
 
 export const PUBLIC_DATA_HIDE_RULES: PublicDataHideRule[] = [
+  { question: "Seu Nome" },
+  { question: "Seu Telefone" },
+  { question: "Seu E-mail" },
+  { partial: "Nome do Presidente" },
+  { partial: "Telefone do Presidente" },
+  { partial: "E-mail do Presidente" },
+  { partial: "Nome do Responsável" },
+  { partial: "Telefone do Responsável" },
+  { partial: "E-mail do Responsável" },
   ...envRules,
 ];

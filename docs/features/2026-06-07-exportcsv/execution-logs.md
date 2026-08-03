@@ -238,3 +238,15 @@
 - Notes:
   - Added regression coverage for public LGPD filtering and coord_regional page exclusion.
   - Manual page comparisons remain documented in tasks but were not executed in this environment.
+
+### Task: Create backend summary data model proposal
+
+- Status: done
+- Files changed:
+  - `docs/features/2026-06-07-exportcsv/summary-data-model-proposal.md`
+  - `docs/features/2026-06-07-exportcsv/tasks.md`
+  - `docs/features/2026-06-07-exportcsv/execution-logs.md`
+- Notes:
+  - Documented why the current `summary.QUESTIONS` model loses repeated group answers.
+  - Proposed `schemaVersion: 2` with immutable form snapshot, group occurrences and optional flat derived index.
+  - Documented recommended backend API behavior, migration path, indexes, risks and a minimum viable model.

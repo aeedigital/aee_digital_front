@@ -9,10 +9,11 @@ interface QuestionProps {
   questionIndex: number | string;
   answer: Answer;
   placeholder?: string;
+  answerMetadata?: Pick<Answer, 'FORM_ID' | 'GROUP_KEY' | 'GROUP_INSTANCE_ID' | 'GROUP_OCCURRENCE_ORDER' | 'QUESTION_ORDER'>;
   onAnswerChange?: (questionId: string, answerId: string | null, newAnswer: Answer) => void;
 }
 
-export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange, placeholder }: QuestionProps) {
+export function QuestionComponent({ question, centroId, questionIndex, answer, onAnswerChange, placeholder, answerMetadata }: QuestionProps) {
   const [questionValue, setQuestionValue] = useState<Answer>(answer);
   const [isEmpty, setIsEmpty] = useState<boolean>(false);
 
@@ -37,6 +38,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
             },
             body: JSON.stringify({
               ANSWER: String(value),
+              ...answerMetadata,
             }),
           }
         ).then((res: any) => res.json());
@@ -52,6 +54,7 @@ export function QuestionComponent({ question, centroId, questionIndex, answer, o
               ANSWER: String(value),
               CENTRO_ID: centroId,
               QUESTION_ID: questionId,
+              ...answerMetadata,
             }),
           }
         ).then((res: any) => res.json());

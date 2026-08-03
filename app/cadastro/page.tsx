@@ -17,10 +17,16 @@ import {
 
 type SummaryForCadastro = {
   CENTRO_ID: string;
+  FORM_ID: string;
   QUESTIONS?: Array<{
     _id: string;
     ANSWER?: string;
     QUESTION: string;
+    ANSWER_ID?: string;
+    GROUP_KEY?: string;
+    GROUP_INSTANCE_ID?: string;
+    OCCURRENCE_ORDER?: number;
+    QUESTION_ORDER?: number;
   }>;
 };
 
@@ -92,8 +98,13 @@ function CadastroPage() {
             QUESTION_ID: answer.QUESTION,
             CENTRO_ID: summary.CENTRO_ID,
             ANSWER: answer.ANSWER ?? "",
-            _id: answer._id,
+            _id: answer.ANSWER_ID || answer._id,
             QUIZ_ID: "",
+            FORM_ID: summary.FORM_ID,
+            GROUP_KEY: answer.GROUP_KEY,
+            GROUP_INSTANCE_ID: answer.GROUP_INSTANCE_ID,
+            GROUP_OCCURRENCE_ORDER: answer.OCCURRENCE_ORDER,
+            QUESTION_ORDER: answer.QUESTION_ORDER,
           }));
         } else {
           answers = await fetchJsonNoStore<Answer[]>(`/answers?CENTRO_ID=${centroId}`);
@@ -219,7 +230,7 @@ function CadastroPage() {
           {currentPageIndex < pages.length ? (
             <div>
               <div className="space-y-4">
-                {pages[currentPageIndex].QUIZES.map((quiz) => {
+                {pages[currentPageIndex].QUIZES.map((quiz, quizIndex) => {
                   const quizQuestionIds = quiz.QUESTIONS.flatMap((questionGroup) =>
                     questionGroup.GROUP.map((question) => question._id)
                   ).join("-");
@@ -232,6 +243,9 @@ function CadastroPage() {
                       quiz={quiz}
                       initialCache={answersCache}
                       onAnswerChange={handleAnswerChange}
+                      formId={formId}
+                      pageIndex={allPages.indexOf(pages[currentPageIndex])}
+                      quizIndex={quizIndex}
                     />
                   );
                 })}

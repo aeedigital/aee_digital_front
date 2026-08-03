@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import type { Answer, Page, Question, QuestionGroup, Quiz } from "@/interfaces/form.interface";
+import { projectCadastroQuestionGroup } from '@/lib/cadastroViewModel';
 
 type AnswerCache = Record<string, (Answer & { createdAt?: string; updatedAt?: string })[]>;
 
@@ -40,41 +41,27 @@ function ReadOnlyQuestion({
 function ReadOnlyGroup({
   questionGroup,
   answersCache,
+  groupKey,
 }: {
   questionGroup: QuestionGroup;
   answersCache: AnswerCache;
+  groupKey: string;
 }) {
-  const { IS_MULTIPLE, GROUP } = questionGroup;
-
-  const groupCache = useMemo(
-    () =>
-      GROUP.map((q) => ({
-        question: q,
-        answers: answersCache[q._id] || [],
-      })),
-    [GROUP, answersCache]
-  );
-
-  const answersLength = useMemo(() => {
-    if (!IS_MULTIPLE) return 1;
-    const lengths = groupCache.map((item) => (item.answers?.length ? item.answers.length : 0));
-    const max = lengths.length ? Math.max(...lengths) : 0;
-    return Math.max(max, 1);
-  }, [IS_MULTIPLE, groupCache]);
+  const projected = useMemo(() => projectCadastroQuestionGroup(questionGroup, answersCache, { groupKey }), [questionGroup, answersCache, groupKey]);
 
   return (
     <div className="space-y-6">
-      {Array.from({ length: answersLength }).map((_, groupIndex) => (
+      {projected.occurrences.map((occurrence) => (
         <div
-          key={groupIndex}
+          key={occurrence.groupInstanceId}
           className="relative space-y-4 rounded-md border p-4 shadow-sm"
         >
           <div className="flex flex-wrap gap-4">
-            {groupCache.map(({ question, answers }) => (
+            {occurrence.questionsAnswered.map(({ question, answer }) => (
               <ReadOnlyQuestion
-                key={`${question._id}-${groupIndex}`}
+                key={`${question._id}-${occurrence.groupInstanceId}`}
                 question={question}
-                answer={answers[groupIndex]}
+                answer={answer}
               />
             ))}
           </div>
@@ -87,9 +74,13 @@ function ReadOnlyGroup({
 function ReadOnlyQuiz({
   quiz,
   answersCache,
+  pageIndex,
+  quizIndex,
 }: {
   quiz: Quiz;
   answersCache: AnswerCache;
+  pageIndex: number;
+  quizIndex: number;
 }) {
   return (
     <div className="rounded-md border p-4 space-y-4">
@@ -99,6 +90,7 @@ function ReadOnlyQuiz({
           key={idx}
           questionGroup={group}
           answersCache={answersCache}
+          groupKey={`page:${pageIndex}/quiz:${quizIndex}/group:${idx}`}
         />
       ))}
     </div>
@@ -145,7 +137,7 @@ export default function PublicCentroReadOnly({ pages, answersCache }: Props) {
     <div className="w-full">
       <div className="space-y-4">
         {currentPage.QUIZES.map((quiz, idx) => (
-          <ReadOnlyQuiz key={idx} quiz={quiz} answersCache={answersCache} />
+          <ReadOnlyQuiz key={idx} quiz={quiz} answersCache={answersCache} pageIndex={currentPageIndex} quizIndex={idx} />
         ))}
       </div>
 

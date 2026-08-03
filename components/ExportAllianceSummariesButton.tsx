@@ -5,8 +5,7 @@ import { useState } from "react";
 import { getCadastroInfo, type CadastroInfo } from "@/app/actions/cadastroInfo";
 import { Regional, Centro } from "@/interfaces/centro.interface";
 import { apiFetch } from "@/lib/api";
-import { buildCadastroCsvContentForCentros, type CadastroCsvCentro } from "@/lib/cadastroCsvExport";
-import { downloadCsvFile } from "@/lib/summaryCsv";
+import { downloadSummaryXlsx, fetchLatestSummaryRows, type SummaryXlsxCentro } from '@/lib/summaryXlsxExport';
 
 type RegionalLike = Partial<Regional> & {
   id?: string;
@@ -15,9 +14,6 @@ type RegionalLike = Partial<Regional> & {
   nomeRegional?: string;
   nome?: string;
   name?: string;
-};
-type CentroWithSummaries = Centro & {
-  summaries?: unknown;
 };
 
 const REGIONAL_CONCURRENCY = 3;
@@ -158,20 +154,9 @@ export default function ExportAllianceSummariesButton({
             throw new Error(`A regional "${regionalNome}" não possui identificador para exportação.`);
           }
 
-          const params = new URLSearchParams();
-          if (dateFrom) params.append("dateFrom", dateFrom);
-          if (dateTo) params.append("dateTo", dateTo);
-          params.append("include", "answers,summaries");
-          params.append("sortBy", "updatedAt:desc");
+          const centros = await fetchJsonWithRetry<Centro[]>(`/regionais/${regionalId}/centros`);
 
-          const path = params.toString()
-            ? `/regionais/${regionalId}/centros-with-answers?${params.toString()}`
-            : `/regionais/${regionalId}/centros-with-answers`;
-
-          const payload = await fetchJsonWithRetry<{ centros?: CentroWithSummaries[] }>(path);
-          const centros = Array.isArray(payload?.centros) ? payload.centros : [];
-
-          return centros.map<CadastroCsvCentro>((centro) => ({
+          return centros.map<SummaryXlsxCentro>((centro) => ({
             ...centro,
             regionalNome,
           }));
@@ -185,14 +170,13 @@ export default function ExportAllianceSummariesButton({
         return;
       }
 
-      const csvContent = await buildCadastroCsvContentForCentros({
-        centros,
-        includeRegional: true,
+      const rows = await fetchLatestSummaryRows(centros, {
+        dateFrom,
+        dateTo,
       });
-
-      downloadCsvFile("cadastro_alianca.csv", csvContent);
+      await downloadSummaryXlsx('cadastro_alianca.xlsx', rows);
     } catch (error: any) {
-      console.error("[Resumo/Aliança] Falha ao exportar CSV", error);
+      console.error("[Resumo/Aliança] Falha ao exportar XLSX", error);
       alert(error?.message || "Não foi possível exportar os dados exibidos da Aliança.");
     } finally {
       setExporting(false);
@@ -220,7 +204,7 @@ export default function ExportAllianceSummariesButton({
         cursor: isDisabled ? "not-allowed" : "pointer",
       }}
     >
-      {exporting ? "Exportando CSV..." : "Exportar dados exibidos da Aliança (CSV)"}
+      {exporting ? "Exportando XLSX..." : "Exportar dados da Aliança (XLSX)"}
     </button>
   );
 }

@@ -39,8 +39,6 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId: _centroId, c
         }
 
         let finalized = true;
-        const questions = summary.QUESTIONS || [];
-
         for (const questionAnswered of coordQuestionAnswered) {
             const answerValue = questionAnswered.answer?.ANSWER;
             if(!questionAnswered.question || !answerValue || String(answerValue).trim() === ""){
@@ -50,28 +48,13 @@ export function CoordAnalisisButton({ onFinalizarAnalise, centroId: _centroId, c
         }
 
         if(finalized){
-            const payload = {
-                FORM_ID: summary.FORM_ID,
-                CENTRO_ID: summary.CENTRO_ID,
-                QUESTIONS: questions,
-            };
-
-            await Promise.all([
-                fetch(apiUrl(`/summaries/${summary._id}`), {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(payload),
-                }),
-                fetch(apiUrl(`/summaries/${summary._id}/validated-by-coord`), {
+            await fetch(apiUrl(`/summaries/${summary._id}/validated-by-coord`), {
                     method: "PATCH",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({ validatedByCoord: true }),
-                }),
-            ]).finally(() => {
+                }).finally(() => {
                 onFinalizarAnalise(true);
             });
        

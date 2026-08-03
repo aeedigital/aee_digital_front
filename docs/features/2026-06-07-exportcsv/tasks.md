@@ -32,6 +32,7 @@ Automated complete
 - [x] Create integration tests for center, regional and Alliance exports
 - [x] Create parity tests comparing projected `/cadastro` values with CSV cells
 - [x] Create harness task contract for manual page-versus-CSV validation
+- [x] Create backend summary data model proposal document
 
 ## Validation tasks
 

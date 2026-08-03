@@ -10,6 +10,7 @@ export type ProjectedCadastroQuestionAnswer = {
 };
 
 export type ProjectedCadastroOccurrence = {
+  groupInstanceId: string;
   occurrenceIndex: number;
   questionsAnswered: ProjectedCadastroQuestionAnswer[];
 };
@@ -74,7 +75,7 @@ function createEmptyAnswer(question: Question, centroId = ""): Answer {
 export function projectCadastroQuestionGroup(
   questionGroup: QuestionGroup,
   answersCache: CadastroAnswersCache,
-  options: { centroId?: string; groupIndex?: number } = {}
+  options: { centroId?: string; groupIndex?: number; groupKey?: string } = {}
 ): ProjectedCadastroGroup {
   const groupCache: CadastroAnswersCache = {};
 
@@ -84,13 +85,22 @@ export function projectCadastroQuestionGroup(
     }
   });
 
-  const occurrenceCount = questionGroup.IS_MULTIPLE
+  const explicitIds = Array.from(new Set(
+    Object.values(groupCache).flatMap((items) =>
+      items.map((answer) => answer.GROUP_INSTANCE_ID).filter((id): id is string => Boolean(id))
+    )
+  ));
+  const occurrenceCount = explicitIds.length || (questionGroup.IS_MULTIPLE
     ? Math.max(...Object.values(groupCache).map((answers) => answers.length), 1)
-    : 1;
+    : 1);
+  const groupKey = options.groupKey || `group:${options.groupIndex ?? 0}`;
 
   const occurrences = Array.from({ length: occurrenceCount }, (_, occurrenceIndex) => {
     const questionsAnswered = questionGroup.GROUP.map((question) => {
-      const answer = groupCache[question._id]?.[occurrenceIndex];
+      const items = groupCache[question._id] || [];
+      const answer = explicitIds.length
+        ? items.find((item) => item.GROUP_INSTANCE_ID === explicitIds[occurrenceIndex])
+        : items[occurrenceIndex];
 
       return {
         answer: answer || createEmptyAnswer(question, options.centroId),
@@ -101,6 +111,7 @@ export function projectCadastroQuestionGroup(
     });
 
     return {
+      groupInstanceId: explicitIds[occurrenceIndex] || `${groupKey}/occurrence:${occurrenceIndex}`,
       occurrenceIndex,
       questionsAnswered,
     };
@@ -134,6 +145,7 @@ export function projectCadastroPages(
           projectCadastroQuestionGroup(questionGroup, answersCache, {
             centroId: options.centroId,
             groupIndex,
+            groupKey: `page:${pageIndex}/quiz:${quizIndex}/group:${groupIndex}`,
           })
         ),
       })),

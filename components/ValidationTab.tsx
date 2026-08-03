@@ -5,7 +5,6 @@ import { apiUrl } from "@/lib/api";
 import {
   buildRequiredValidationDebug,
   getInvalidRequiredQuestions,
-  pickBestRequiredAnswer,
 } from "@/lib/requiredAnswers";
 
 export function ValidationTab({
@@ -47,19 +46,9 @@ export function ValidationTab({
 
   const handleSubmit = async () => {
     try {
-      const allAnswers = questions.flatMap((q) => q.GROUP || []).map((q) => {
-        const answers = answersCache[q._id] || [];
-        const currentAnswer = pickBestRequiredAnswer(answers);
-        return {
-          QUESTION: q._id,
-          ANSWER: currentAnswer?.ANSWER ?? "",
-        };
-      });
-
       const payload = {
         FORM_ID: formId,
         CENTRO_ID: centroId,
-        QUESTIONS: allAnswers,
       };
 
       const response: Response = await fetch(apiUrl(`/summaries`), {

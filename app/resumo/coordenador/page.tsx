@@ -14,8 +14,11 @@ import {
   normalizeSummaries,
 } from '@/lib/summaries';
 import { extractCoordinatorFormData } from '@/lib/coordinatorQuestions';
-import { buildCadastroCsvContentForCentros } from '@/lib/cadastroCsvExport';
-import { downloadCsvFile } from '@/lib/summaryCsv';
+import {
+  buildRegionalSummaryFileName,
+  downloadSummaryXlsx,
+  fetchLatestSummaryRows,
+} from '@/lib/summaryXlsxExport';
 
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -249,13 +252,17 @@ function MainPage() {
     try {
       setExportingCsv(true);
 
-      const csvContent = await buildCadastroCsvContentForCentros({
-        centros,
-      });
-
-      downloadCsvFile("cadastro_regional.csv", csvContent);
+      const rows = await fetchLatestSummaryRows(centros.map((centro) => ({
+        ...centro,
+        regionalNome: regionalInfo?.NOME_REGIONAL || '',
+      })));
+      const regionalName = regionalInfo?.NOME_REGIONAL || regionalId || 'regional';
+      await downloadSummaryXlsx(
+        buildRegionalSummaryFileName(regionalName, regionalId || 'regional'),
+        rows,
+      );
     } catch (error: unknown) {
-      console.error("[Resumo/Coordenador] Falha ao exportar CSV", error);
+      console.error("[Resumo/Coordenador] Falha ao exportar XLSX", error);
       const message = error instanceof Error ? error.message : "Não foi possível exportar os dados exibidos.";
       alert(message);
     } finally {
@@ -296,7 +303,7 @@ function MainPage() {
                   disabled={!canExport}
                   className={`px-4 py-2 rounded text-white transition ${canExport ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
                 >
-                  {exportingCsv ? "Exportando CSV..." : "Exportar dados exibidos (CSV)"}
+                  {exportingCsv ? "Exportando XLSX..." : "Exportar últimos resumos (XLSX)"}
                 </button>
                 {user?.role === "admin" && (
                   <CentroDialog regional={regionalInfo} onCentroCreated={handleCentroCreated} />
