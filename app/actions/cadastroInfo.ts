@@ -5,6 +5,7 @@ type CadastroInfoApiResponse = {
   START_DATE?: string;
   END_DATE?: string;
   FORM_ID?: string;
+  CYCLE_ID?: string;
   IS_ACTIVE?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -15,6 +16,7 @@ export type CadastroInfo = {
   end: string;
   formId: string;
   isActive: boolean;
+  cycleId?: string;
 };
 
 const FALLBACK_CADASTRO_INFO: CadastroInfo = {
@@ -49,6 +51,7 @@ export async function getCadastroInfo(): Promise<CadastroInfo> {
       end: payload.END_DATE,
       formId: payload.FORM_ID,
       isActive: Boolean(payload.IS_ACTIVE),
+      cycleId: payload.CYCLE_ID,
     };
   } catch {
     return FALLBACK_CADASTRO_INFO;
@@ -61,7 +64,12 @@ export async function saveCadastroInfo(payload: CadastroInfo): Promise<CadastroI
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      START_DATE: payload.start,
+      END_DATE: payload.end,
+      FORM_ID: payload.formId,
+      IS_ACTIVE: payload.isActive,
+    }),
   });
 
   if (!response.ok) {
@@ -78,5 +86,6 @@ export async function saveCadastroInfo(payload: CadastroInfo): Promise<CadastroI
     end: saved.END_DATE,
     formId: saved.FORM_ID,
     isActive: Boolean(saved.IS_ACTIVE),
+    cycleId: saved.CYCLE_ID,
   };
 }
