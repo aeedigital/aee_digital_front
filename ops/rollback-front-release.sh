@@ -29,8 +29,7 @@ done
 
 jq -r '.Versions[]? | select(.IsLatest == true) | [.Key, .VersionId] | @tsv' "$MANIFEST" |
 while IFS=$'\t' read -r key version; do
-  encoded="$(jq -rn --arg value "$BUCKET/$key" '$value|@uri')"
-  aws s3api copy-object --bucket "$BUCKET" --key "$key" --copy-source "$encoded?versionId=$version" >/dev/null
+  aws s3api copy-object --bucket "$BUCKET" --key "$key" --copy-source "$BUCKET/$key?versionId=$version" >/dev/null
 done
 
 aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths '/*' >/dev/null

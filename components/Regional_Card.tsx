@@ -57,7 +57,9 @@ const Regional_Card: React.FC<CardProps> = ({
       console.warn("Regional sem ID, navegação ignorada.");
       return;
     }
-    router.push(`/resumo/coordenador?regionalId=${regionalId}`);
+    router.push(
+      `/resumo/coordenador/?regionalId=${encodeURIComponent(regionalId)}`
+    );
   };
 
   const percentage = centrosCount > 0

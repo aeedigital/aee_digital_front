@@ -60,6 +60,7 @@ function MainPage() {
   const [selectedCoordenador, setSelectedCoordenador] = useState<string | undefined>("");
   const [regionalInfo, setRegionalInfo] = useState<any>({});
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [totalRespostas, setTotalRespostas] = useState(0);
   const [totalCentros, setTotalCentros] = useState(0);
@@ -99,6 +100,7 @@ function MainPage() {
       }
 
       hasLoadedRef.current = true; // Set ref value to true to prevent further calls
+      setLoadError(null);
 
       const cadastroInfo = await getCadastroInfo();
 
@@ -133,15 +135,14 @@ function MainPage() {
       const params = new URLSearchParams();
       if (dateFromISO) params.append("dateFrom", dateFromISO);
       if (dateToISO) params.append("dateTo", dateToISO);
-      params.append("include", "answers,summaries");
+      params.set("include", "answers,summaries");
+      params.append("limitSummaries", "1");
       params.append("sortBy", "updatedAt:desc");
 
       try {
         const centrosWithAnswersUrl = params.toString()
           ? apiUrl(`/regionais/${regionalId}/centros-with-answers?${params.toString()}`)
           : apiUrl(`/regionais/${regionalId}/centros-with-answers`);
-
-
         console.log("CadastroInfo", cadastroInfo, `/forms?_id=${cadastroInfo.formId}`);
 
         const [regionalData, formData, pessoasData, centrosWithAnswers] = await Promise.all([
@@ -150,7 +151,6 @@ function MainPage() {
           fetch(apiUrl(`/pessoas`)).then(safeJson),
           fetch(centrosWithAnswersUrl).then(safeJson),
         ]);
-
         console.log("Fetched form data:", formData);
 
         const form = Array.isArray(formData) ? formData[0] : formData;
@@ -174,13 +174,19 @@ function MainPage() {
         setCentros(centros);
         setRegionalInfo(regionalData || {});
 
-        // Processar answers/summaries da rota agregada (centros-with-answers)
+        // Answers e summaries são carregados separadamente para manter cada
+        // resposta abaixo do limite síncrono de payload da API.
         const answersBycentro: Record<string, Answer[]> = {};
         const summariesBycentro: Record<string, Summary[]> = {};
         for (const centro of centros) {
           const cid = centro._id;
           answersBycentro[cid] = Array.isArray((centro as any).answers) ? (centro as any).answers : [];
-          summariesBycentro[cid] = normalizeSummaries((centro as any).summaries);
+          for (const summary of normalizeSummaries((centro as any).summaries || [])) {
+            if (!summariesBycentro[cid]) {
+              summariesBycentro[cid] = [];
+            }
+            summariesBycentro[cid].push(summary);
+          }
         }
 
         if (debugResumo) {
@@ -190,7 +196,7 @@ function MainPage() {
 
           console.groupCollapsed("[Resumo/Coordenador] debugResumo=1");
           console.log("formId atual:", cadastroInfo?.formId);
-          console.log("Contagem summaries da rota centros-with-answers por centro:", summariesCountByCentro);
+          console.log("Contagem summaries compactos por centro:", summariesCountByCentro);
           console.groupEnd();
         }
 
@@ -198,13 +204,14 @@ function MainPage() {
         setAnswersByCentroId(answersBycentro);
 
         const centrosComSummaries = Object.values(summariesBycentro).filter((arr) => arr.length > 0).length;
-        setTotalRespostas(centrosComSummaries);
-        setTotalCentros(centros.length || 0);
+        setTotalRespostas(Number(centrosWithAnswers?.totals?.totalRespostas ?? centrosComSummaries));
+        setTotalCentros(Number(centrosWithAnswers?.totals?.totalCentros ?? centros.length ?? 0));
 
         setLoading(false); // Finaliza o estado de carregamento
 
       } catch (error) {
         console.error("Erro ao buscar dados da regional:", error);
+        setLoadError("Não foi possível carregar os dados desta regional. Atualize a página e tente novamente.");
         setLoading(false);
       }
 
@@ -275,6 +282,10 @@ function MainPage() {
       {!regionalId ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center text-gray-600">
           Selecione uma regional para visualizar os dados.
+        </div>
+      ) : loadError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700">
+          {loadError}
         </div>
       ) : loading ? (
         <div className="space-y-4">
