@@ -135,26 +135,14 @@ function MainPage() {
       const params = new URLSearchParams();
       if (dateFromISO) params.append("dateFrom", dateFromISO);
       if (dateToISO) params.append("dateTo", dateToISO);
-      params.append("include", "answers");
+      params.set("include", "answers,summaries");
+      params.append("limitSummaries", "1");
       params.append("sortBy", "updatedAt:desc");
 
       try {
         const centrosWithAnswersUrl = params.toString()
           ? apiUrl(`/regionais/${regionalId}/centros-with-answers?${params.toString()}`)
           : apiUrl(`/regionais/${regionalId}/centros-with-answers`);
-        const summariesParams = new URLSearchParams();
-        if (dateFromISO) summariesParams.append("dateFrom", dateFromISO);
-        if (dateToISO) summariesParams.append("dateTo", dateToISO);
-        summariesParams.append(
-          "fields",
-          "CENTRO_ID,validatedByCoordAt,createdAt,updatedAt"
-        );
-        summariesParams.append("sort", "updatedAt:-1");
-        const regionalSummariesUrl = apiUrl(
-          `/regionais/${regionalId}/summaries?${summariesParams.toString()}`
-        );
-
-
         console.log("CadastroInfo", cadastroInfo, `/forms?_id=${cadastroInfo.formId}`);
 
         const [regionalData, formData, pessoasData, centrosWithAnswers] = await Promise.all([
@@ -163,8 +151,6 @@ function MainPage() {
           fetch(apiUrl(`/pessoas`)).then(safeJson),
           fetch(centrosWithAnswersUrl).then(safeJson),
         ]);
-        const regionalSummaries = await fetch(regionalSummariesUrl).then(safeJson);
-
         console.log("Fetched form data:", formData);
 
         const form = Array.isArray(formData) ? formData[0] : formData;
@@ -195,13 +181,12 @@ function MainPage() {
         for (const centro of centros) {
           const cid = centro._id;
           answersBycentro[cid] = Array.isArray((centro as any).answers) ? (centro as any).answers : [];
-        }
-        for (const summary of normalizeSummaries(regionalSummaries)) {
-          if (!summary.CENTRO_ID) continue;
-          if (!summariesBycentro[summary.CENTRO_ID]) {
-            summariesBycentro[summary.CENTRO_ID] = [];
+          for (const summary of normalizeSummaries((centro as any).summaries || [])) {
+            if (!summariesBycentro[cid]) {
+              summariesBycentro[cid] = [];
+            }
+            summariesBycentro[cid].push(summary);
           }
-          summariesBycentro[summary.CENTRO_ID].push(summary);
         }
 
         if (debugResumo) {
@@ -219,8 +204,8 @@ function MainPage() {
         setAnswersByCentroId(answersBycentro);
 
         const centrosComSummaries = Object.values(summariesBycentro).filter((arr) => arr.length > 0).length;
-        setTotalRespostas(centrosComSummaries);
-        setTotalCentros(centros.length || 0);
+        setTotalRespostas(Number(centrosWithAnswers?.totals?.totalRespostas ?? centrosComSummaries));
+        setTotalCentros(Number(centrosWithAnswers?.totals?.totalCentros ?? centros.length ?? 0));
 
         setLoading(false); // Finaliza o estado de carregamento
 
